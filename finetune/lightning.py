@@ -33,7 +33,9 @@ class FineTuner(L.LightningModule):
     def validation_step(self, batch: dict, batch_idx: int):
         outputs = self.model(**batch, output_hidden_states=True)
         loss = outputs.loss
-        auxiliary_loss = self.auxiliary_loss(batch["labels"], outputs.logits, outputs.hidden_states)
+        auxiliary_loss = self.auxiliary_loss(
+            batch["labels"], outputs.logits, outputs.hidden_states
+        )
         accuracy = (outputs.logits.argmax(dim=-1) == batch["labels"]).float().mean()
 
         log_dict = {
