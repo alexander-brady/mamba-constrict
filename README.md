@@ -50,3 +50,15 @@ The project name for W&B logging can be set in the configuration file or overrid
 ```bash
 uv run -m finetune wandb.project=finetune-mamba
 ```
+
+## Defining a Custom Loss
+
+Auxiliary losses can be defined in the `finetune/criterion/` directory. To use a custom loss function, specify it in the configuration file by setting the `criterion._target_` parameter to point to your custom loss class, which is instantiated with any required arguments.
+
+For example, if you have a custom loss class `MyCustomLoss` defined in `finetune/criterion/my_custom_loss.py`, you can set it up in the configuration as follows:
+
+```yaml
+_target_: finetune.criterion.my_custom_loss.MyCustomLoss
+weight: 0.5
+other_param: value
+```
