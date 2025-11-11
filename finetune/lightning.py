@@ -12,6 +12,7 @@ class FineTuner(L.LightningModule):
         self.cfg = cfg
         self.model = model
         self.auxiliary_loss = instantiate(self.cfg.loss)
+        self.save_hyperparameters(cfg)
 
     def forward(self, **batch):
         return self.model(**batch)
@@ -30,9 +31,9 @@ class FineTuner(L.LightningModule):
         return loss + auxiliary_loss
 
     def validation_step(self, batch: dict, batch_idx: int):
-        outputs = self.model(**batch)
+        outputs = self.model(**batch, output_hidden_states=True)
         loss = outputs.loss
-        auxiliary_loss = self.auxiliary_loss(**batch)
+        auxiliary_loss = self.auxiliary_loss(batch["labels"], outputs.logits, outputs.hidden_states)
         accuracy = (outputs.logits.argmax(dim=-1) == batch["labels"]).float().mean()
 
         log_dict = {

@@ -55,10 +55,12 @@ uv run -m finetune wandb.project=finetune-mamba
 
 Auxiliary losses can be defined in the `finetune/criterion/` directory. To use a custom loss function, specify it in the configuration file by setting the `criterion._target_` parameter to point to your custom loss class, which is instantiated with any required arguments.
 
+The custom loss class should inherit from `finetune.criterion.Criterion` and implement the `compute_loss` method.
+
 For example, if you have a custom loss class `MyCustomLoss` defined in `finetune/criterion/my_custom_loss.py`, you can set it up in the configuration as follows:
 
 ```yaml
 _target_: finetune.criterion.my_custom_loss.MyCustomLoss
-weight: 0.5
+weight: 0.5  # Defined for all criterion classes, default is 1.0
 other_param: value
 ```

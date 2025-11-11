@@ -1,2 +1,2 @@
-_target_: finetune.criterion.AuxiliaryLoss
+_target_: finetune.criterion.EmptyCriterion
 weight: 0.1
