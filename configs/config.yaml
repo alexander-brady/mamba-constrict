@@ -1,4 +1,5 @@
 defaults:
+  - override hydra/launcher: submitit_slurm
   - model: mamba2.8
   - optim: adamw
   - data: the_pile
