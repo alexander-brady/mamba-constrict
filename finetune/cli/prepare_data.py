@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, PreTrainedTokenizer
 logger = logging.getLogger(__name__)
 
 
-def save_data(
+def prepare_data(
     data_cfg: DictConfig,
     tokenizer: PreTrainedTokenizer,
     split: Literal["train", "validation"],
@@ -26,6 +26,8 @@ def save_data(
     """
     # Load dataset
     ds = datasets.load_dataset(data_cfg.name, split=data_cfg[split].split)
+    assert isinstance(ds, datasets.Dataset)  # for type checker
+    
     logger.info(f"Loaded {split} split with {len(ds)} samples.")
 
     def tokenize(example):
@@ -76,8 +78,8 @@ def main(cfg: DictConfig):
         logger.warning("Added missing EOS token to tokenizer.")
 
     # Save processed data for train and validation splits
-    save_data(cfg.data, tokenizer, split="train")
-    save_data(cfg.data, tokenizer, split="validation")
+    prepare_data(cfg.data, tokenizer, split="train")
+    prepare_data(cfg.data, tokenizer, split="validation")
 
 
 if __name__ == "__main__":
