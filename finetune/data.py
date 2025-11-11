@@ -27,7 +27,7 @@ def load_dataloader(data_cfg: DictConfig, split: Literal["train", "validation"])
 
     # Load all shards
     datasets = [load_from_disk(str(p)) for p in all_paths]
-    ds = concatenate_datasets(datasets)
+    ds = concatenate_datasets(datasets)  # type: ignore
 
     # Create dataloader
     dataloader = DataLoader(

@@ -27,7 +27,7 @@ def prepare_data(
     # Load dataset
     ds = datasets.load_dataset(data_cfg.name, split=data_cfg[split].split)
     assert isinstance(ds, datasets.Dataset)  # for type checker
-    
+
     logger.info(f"Loaded {split} split with {len(ds)} samples.")
 
     def tokenize(example):
