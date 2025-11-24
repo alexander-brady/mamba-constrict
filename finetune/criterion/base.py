@@ -36,4 +36,16 @@ class Criterion(ABC):
         preds: torch.Tensor,
         hidden_states: Sequence[torch.Tensor],
         **kwargs: Any,
-    ) -> float: ...
+    ) -> float:
+        """Compute the auxiliary loss.
+
+        Args:
+            labels (torch.Tensor): Ground truth labels.
+            preds (torch.Tensor): Model predictions.
+            hidden_states (Sequence[torch.Tensor]): Hidden states from the model.
+            **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+            float: Computed auxiliary loss.
+        """
+        ...
