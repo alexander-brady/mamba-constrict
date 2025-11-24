@@ -69,7 +69,7 @@ def prepare_data(
     logger.info(f"Saved {shards} shards for {split} to {output_dir}")
 
 
-@hydra.main(version_base="1.3", config_path="configs", config_name="config")
+@hydra.main(version_base="1.3", config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
     # Prepare tokenizer
     tokenizer = AutoTokenizer.from_pretrained(cfg.model.name)
