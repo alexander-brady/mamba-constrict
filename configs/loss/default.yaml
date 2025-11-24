@@ -1,2 +1,2 @@
-_target_: finetune.criterion.EmptyCriterion
+_target_: finetune.criterion.zero.EmptyCriterion
 weight: 0.1
