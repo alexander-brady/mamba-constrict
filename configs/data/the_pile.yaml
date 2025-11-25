@@ -1,15 +1,15 @@
-name: EleutherAI/pile
+name: monology/pile-uncopyrighted
 data_dir: ${oc.env:SCRATCH}/finetune/data/${.name}
 
 block_size: 2048
 
 train:
-  split: train[:0.02%]
+  split: train[:2%]
   num_shards: 4
   save_dir: ${..data_dir}/train/
 
 validation:
-  split: train[0.02%:0.03%]
+  split: train[2%:3%]
   num_shards: 2
   save_dir: ${..data_dir}/validation/
 

@@ -25,16 +25,22 @@ def prepare_data(
         split (Literal["train", "validation"]): Dataset split to process.
     """
     # Load dataset
-    ds = datasets.load_dataset(data_cfg.name, split=data_cfg[split].split)
+    ds = datasets.load_dataset(data_cfg.name, split=data_cfg[split].split, trust_remote_code=True)
     assert isinstance(ds, datasets.Dataset)  # for type checker
 
     logger.info(f"Loaded {split} split with {len(ds)} samples.")
 
-    def tokenize(example):
-        input_ids = tokenizer(
-            example["text"], truncation=False, return_attention_mask=False
-        )["input_ids"]
-        return {"input_ids": input_ids + [tokenizer.eos_token_id]}
+    def tokenize(batch):
+        enc = tokenizer(
+            batch["text"],
+            truncation=False,
+            return_attention_mask=False,
+        )
+
+        # append eos for each sequence
+        input_ids = [ids + [tokenizer.eos_token_id] for ids in enc["input_ids"]]
+
+        return {"input_ids": input_ids}
 
     # Apply tokenization
     ds = ds.map(tokenize, remove_columns=ds.column_names, batched=True)
@@ -57,7 +63,7 @@ def prepare_data(
     ds = ds.map(pack_samples, batched=True, batch_size=1000)
 
     # Save processed dataset
-    output_dir = Path(data_cfg[split].output_dir)
+    output_dir = Path(data_cfg[split].save_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Save each shard as a separate file

@@ -11,3 +11,9 @@ checkpoint_every_n_epochs: 10
 
 wandb:
   project: finetune-mamba
+
+hydra:
+  run:
+    dir: outputs/${oc.env:SLURM_JOB_NAME}_${oc.env:SLURM_JOB_ID}
+  sweep:
+    dir: outputs/${oc.env:SLURM_JOB_NAME}_${oc.env:SLURM_JOB_ID}
