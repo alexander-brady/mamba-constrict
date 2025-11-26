@@ -11,6 +11,7 @@ checkpoint_every_n_epochs: 10
 
 wandb:
   project: finetune-mamba
+  entity: mamba-monks
 
 hydra:
   run:
