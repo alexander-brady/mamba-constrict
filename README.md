@@ -7,7 +7,7 @@ This repository contains configurations and scripts to finetune large language m
 To install the necessary dependencies, we recommend using [uv](https://docs.astral.sh/uv/installation).
 
 ```bash
-uv sync
+uv sync --all-extras --dev
 ```
 
 However, if you prefer not to use `uv`, you can manually install the dependencies listed in `pyproject.toml` using pip:
@@ -64,3 +64,19 @@ _target_: finetune.criterion.my_custom_loss.MyCustomLoss
 weight: 0.5  # Defined for all criterion classes, default is 1.0
 other_param: value
 ```
+
+## Contributing
+
+Contributions are welcome! Open an issue to discuss ideas or submit a PR directly.
+
+**Guidelines**
+
+Before submitting a commit or pull request, ensure:
+```
+ruff check . --fix && ruff format .   # Lint & format
+mypy .                                # Type check
+```
+
+## License
+
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
