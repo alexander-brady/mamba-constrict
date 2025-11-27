@@ -9,9 +9,9 @@ GPU_MEMORY_UTILIZATION=${1:-0.95}
 TENSOR_PARALLEL_SIZE=${2:-1}
 
 echo "========================================================================"
-echo "Starting all evaluations"
-echo "GPU Memory Utilization: $GPU_MEMORY_UTILIZATION"
-echo "Tensor Parallel Size: $TENSOR_PARALLEL_SIZE"
+echo "🚀 Starting all evaluations 🚀"
+echo "Remember to set the model paths in eval/config/model2path.json and"
+echo "the maximum sequence lengths in eval/config/model2maxlen.json."
 echo "========================================================================"
 echo ""
 
