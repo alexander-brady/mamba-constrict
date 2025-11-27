@@ -1,11 +1,16 @@
 import os, json
+import argparse
 
-files = os.listdir('results')
+parser = argparse.ArgumentParser()
+parser.add_argument("--results_dir", type=str, default="results")
+args = parser.parse_args()
+
+files = os.listdir(args.results_dir)
 output = ["Model\tOverall\tEasy\tHard\tShort\tMedium\tLong"]
 compensated = False
 
 for file in files:
-    filename = os.path.join('results', file)
+    filename = os.path.join(args.results_dir, file)
     try:
         pred_data = json.load(open(filename, encoding='utf-8'))
     except Exception as e:

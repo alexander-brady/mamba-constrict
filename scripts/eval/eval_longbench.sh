@@ -22,7 +22,7 @@ if [ -f "scripts/env.sh" ]; then
 fi
 
 # Set up random port and key to avoid conflicts
-PORT=8888
+PORT=8000
 export VLLM_API_KEY="token-$(date +%s)"
 export VLLM_URL="http://localhost:$PORT/v1"
 
@@ -30,11 +30,11 @@ echo "Port: $PORT"
 echo "URL: $VLLM_URL"
 
 # Get list of models from config
-MODEL_NAMES=$(python3 -c 'import json; print(" ".join([k for k in json.load(open("eval/LongBench/config/model2path.json")).keys() if not k.startswith("_")]))')
+MODEL_NAMES=$(python3 -c 'import json; print(" ".join([k for k in json.load(open("eval/config/model2path.json")).keys() if not k.startswith("_")]))')
 
 for MODEL_NAME in $MODEL_NAMES; do
-    MODEL_PATH=$(python3 -c "import json; print(json.load(open('eval/LongBench/config/model2path.json'))['$MODEL_NAME'])")
-    MAX_LEN=$(python3 -c "import json; print(json.load(open('eval/LongBench/config/model2maxlen.json'))['$MODEL_NAME'])")
+    MODEL_PATH=$(python3 -c "import json; print(json.load(open('eval/config/model2path.json'))['$MODEL_NAME'])")
+    MAX_LEN=$(python3 -c "import json; print(json.load(open('eval/config/model2maxlen.json'))['$MODEL_NAME'])")
 
     echo "----------------------------------------------------------------"
     echo "Processing Model: $MODEL_NAME"
@@ -66,10 +66,10 @@ for MODEL_NAME in $MODEL_NAMES; do
 
     # Run inference
     pushd eval/LongBench > /dev/null
-    python pred.py --model $MODEL_NAME
+    python pred.py --model $MODEL_NAME --save_dir ../../results/longbench
 
     # Export results
-    python result.py
+    python result.py --results_dir ../../results/longbench
     popd > /dev/null
 
     # Cleanup

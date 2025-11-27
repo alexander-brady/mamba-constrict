@@ -9,8 +9,8 @@ from transformers import AutoTokenizer
 import tiktoken
 import torch.multiprocessing as mp
 
-model_map = json.loads(open('config/model2path.json', encoding='utf-8').read())
-maxlen_map = json.loads(open('config/model2maxlen.json', encoding='utf-8').read())
+model_map = json.loads(open('../config/model2path.json', encoding='utf-8').read())
+maxlen_map = json.loads(open('../config/model2maxlen.json', encoding='utf-8').read())
 
 URL = os.getenv("VLLM_URL")
 API_KEY = os.getenv("VLLM_API_KEY")
