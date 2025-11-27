@@ -12,9 +12,11 @@ import requests
 
 from typing import List
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory to path for imports
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, script_dir)
 
-from .prompts import DEFAULT_PROMPTS, DEFAULT_TEMPLATE, get_formatted_input
+from prompts import DEFAULT_PROMPTS, DEFAULT_TEMPLATE, get_formatted_input
 
 
 def main(
