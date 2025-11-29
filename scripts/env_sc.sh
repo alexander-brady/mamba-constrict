@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-export SCRATCH='/work/scratch/etuezuen'
+export SCRATCH="/work/scratch/$USER"
 dir="$SCRATCH/finetune"
 export HF_HOME="$dir/.hf/"
 export UV_CACHE_DIR="$dir/.uv/"

@@ -25,7 +25,9 @@ def prepare_data(
         split (Literal["train", "validation"]): Dataset split to process.
     """
     # Load dataset
-    ds = datasets.load_dataset(data_cfg.name, split=data_cfg[split].split, trust_remote_code=True)
+    ds = datasets.load_dataset(
+        data_cfg.name, split=data_cfg[split].split, trust_remote_code=True
+    )
     assert isinstance(ds, datasets.Dataset)  # for type checker
 
     logger.info(f"Loaded {split} split with {len(ds)} samples.")
