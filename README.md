@@ -77,6 +77,8 @@ ruff check . --fix && ruff format .   # Lint & format
 mypy .                                # Type check
 ```
 
+Keep commits reasonably small and clear. We recommend using Conventional Commits.
+
 ## License
 
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
