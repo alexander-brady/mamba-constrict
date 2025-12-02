@@ -1,21 +1,19 @@
 #!/bin/bash
-#SBATCH --job-name=finetune_mamba
+#SBATCH --job-name=data_download
 #SBATCH --account=deep_learning
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --ntasks=1
 #SBATCH --tmp=40G
 #SBATCH --mem-per-cpu=24G
-#SBATCH --gpus-per-node=1
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --gres=gpumem:16g
 #SBATCH --mail-type=END,FAIL
 
-echo "Beginning finetuning at $(date)"
+echo "Beginning downloading data at $(date)"
 
-source scripts/env_sc.sh
+source scripts/sc/env.sh
 
-uv run -m finetune
+uv run -m finetune.cli.prepare_data
 
-echo "Finished finetuning at $(date)"
+echo "Finished downloading data at $(date)"

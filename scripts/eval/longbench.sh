@@ -11,7 +11,7 @@
 #SBATCH --gres=gpumem:64g
 #SBATCH --mail-type=END,FAIL
 
-# Usage: sbatch scripts/eval_longbench.sh [gpu_memory_utilization] [tensor_parallel_size]
+# Usage: sbatch scripts/longbench.sh [gpu_memory_utilization] [tensor_parallel_size]
 
 GPU_MEMORY_UTILIZATION=${1:-0.95}
 TENSOR_PARALLEL_SIZE=${2:-1}

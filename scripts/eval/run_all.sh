@@ -25,7 +25,7 @@ START_TIME=$(date +%s)
 echo "========================================================================"
 echo "Starting LongBench Evaluation"
 echo "========================================================================"
-if bash scripts/eval/eval_longbench.sh "$GPU_MEMORY_UTILIZATION" "$TENSOR_PARALLEL_SIZE"; then
+if bash scripts/eval/longbench.sh "$GPU_MEMORY_UTILIZATION" "$TENSOR_PARALLEL_SIZE"; then
     echo "✓ LongBench evaluation completed successfully"
 else
     echo "✗ LongBench evaluation failed"
@@ -37,7 +37,7 @@ echo ""
 echo "========================================================================"
 echo "Starting Babilong Evaluation"
 echo "========================================================================"
-if bash scripts/eval/eval_babilong.sh "$TENSOR_PARALLEL_SIZE"; then
+if bash scripts/eval/babilong.sh "$TENSOR_PARALLEL_SIZE"; then
     echo "✓ Babilong evaluation completed successfully"
 else
     echo "✗ Babilong evaluation failed"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Usage: ./scripts/eval/eval_babilong.sh [tensor_parallel_size]
-# Example: CUDA_VISIBLE_DEVICES=0,1 ./scripts/eval/eval_babilong.sh 2
+# Usage: ./scripts/eval/babilong.sh [tensor_parallel_size]
+# Example: CUDA_VISIBLE_DEVICES=0,1 ./scripts/eval/babilong.sh 2
 set -e
 
 # Function to check if the API server is ready
