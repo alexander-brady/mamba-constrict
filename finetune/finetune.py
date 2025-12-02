@@ -2,6 +2,7 @@ import logging
 
 import hydra
 import lightning as L
+import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.callbacks import (
@@ -19,16 +20,19 @@ logger = logging.getLogger(__name__)
 
 
 @hydra.main(version_base="1.3", config_path="configs", config_name="config")
-def main(cfg: DictConfig):
+def finetune(cfg: DictConfig):
     # Log Hydra working directory
     hydra_wd = HydraConfig.get().runtime.output_dir
     logger.info(f"Hydra working directory: {hydra_wd}")
 
     # Set seed for reproducibility
     L.seed_everything(cfg.seed)
+    torch.set_float32_matmul_precision("high")
 
-    # Instantiate model
-    model = AutoModelForCausalLM.from_pretrained(cfg.model.name)
+    # Instantiate model and prepare for fine-tuning
+    model = AutoModelForCausalLM.from_pretrained(cfg.model.name, low_cpu_mem_usage=True)
+    model.train()
+    model.gradient_checkpointing_enable()
 
     # Load dataset
     train_loader = load_dataloader(cfg.data, split="train")

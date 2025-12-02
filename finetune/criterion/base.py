@@ -23,17 +23,17 @@ class Criterion(ABC):
     def __call__(
         self,
         labels: torch.Tensor,
-        preds: torch.Tensor,
+        logits: torch.Tensor,
         hidden_states: Sequence[torch.Tensor],
         **kwargs: Any,
     ) -> float:
-        return self.weight * self.compute_loss(labels, preds, hidden_states, **kwargs)
+        return self.weight * self.compute_loss(labels, logits, hidden_states, **kwargs)
 
     @abstractmethod
     def compute_loss(
         self,
         labels: torch.Tensor,
-        preds: torch.Tensor,
+        logits: torch.Tensor,
         hidden_states: Sequence[torch.Tensor],
         **kwargs: Any,
     ) -> float:
@@ -41,7 +41,7 @@ class Criterion(ABC):
 
         Args:
             labels (torch.Tensor): Ground truth labels.
-            preds (torch.Tensor): Model predictions.
+            logits (torch.Tensor): Model predictions.
             hidden_states (Sequence[torch.Tensor]): Hidden states from the model.
             **kwargs (Any): Additional keyword arguments.
 

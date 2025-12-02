@@ -1,4 +1,5 @@
 import lightning as L
+import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from transformers import PreTrainedModel
@@ -18,25 +19,34 @@ class FineTuner(L.LightningModule):
         return self.model(**batch)
 
     def training_step(self, batch: dict, batch_idx: int):
-        outputs = self.model(**batch)
+        # Forward pass with hidden states output
+        outputs = self.model(**batch, output_hidden_states=True, return_dict=True)
         loss = outputs.loss
-        auxiliary_loss = self.auxiliary_loss(**batch)
 
+        # Compute auxiliary loss using hidden states
+        auxiliary_loss = self.auxiliary_loss(
+            batch["labels"], outputs.logits, outputs.hidden_states
+        )
+
+        # Log losses
         log_dict = {
             "train/ce_loss": loss,
             "train/auxiliary_loss": auxiliary_loss,
             "train/loss": loss + auxiliary_loss,
         }
-        self.log_dict(log_dict, prog_bar=True)
+        self.log_dict(
+            log_dict, prog_bar=True, sync_dist=True, batch_size=len(batch["input_ids"])
+        )
         return loss + auxiliary_loss
 
-    def validation_step(self, batch: dict, batch_idx: int):
-        outputs = self.model(**batch, output_hidden_states=True)
-        loss = outputs.loss
-        auxiliary_loss = self.auxiliary_loss(
-            batch["labels"], outputs.logits, outputs.hidden_states
-        )
-        accuracy = (outputs.logits.argmax(dim=-1) == batch["labels"]).float().mean()
+    def validation_step(self, batch: dict, batch_idx: int) -> dict[str, float]:
+        with torch.inference_mode():
+            outputs = self.model(**batch, output_hidden_states=True)
+            loss = outputs.loss
+            auxiliary_loss = self.auxiliary_loss(
+                batch["labels"], outputs.logits, outputs.hidden_states
+            )
+            accuracy = (outputs.logits.argmax(dim=-1) == batch["labels"]).float().mean()
 
         log_dict = {
             "val/ce_loss": loss,
@@ -44,7 +54,10 @@ class FineTuner(L.LightningModule):
             "val/loss": loss + auxiliary_loss,
             "val/accuracy": accuracy,
         }
-        self.log_dict(log_dict, prog_bar=True)
+        self.log_dict(
+            log_dict, prog_bar=True, sync_dist=True, batch_size=len(batch["input_ids"])
+        )
+        return log_dict
 
     def configure_optimizers(self):
         optimizer = instantiate(self.cfg.optim, params=self.model.parameters())

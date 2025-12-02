@@ -12,7 +12,7 @@ class EmptyCriterion(Criterion):
     def compute_loss(
         self,
         labels: torch.Tensor,
-        preds: torch.Tensor,
+        logits: torch.Tensor,
         hidden_states: Sequence[torch.Tensor],
         **kwargs: Any,
     ) -> float:
