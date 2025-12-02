@@ -45,6 +45,18 @@ else
 fi
 echo ""
 
+# Run Passkey Retrieval evaluation
+echo "========================================================================"
+echo "Starting Passkey Retrieval Evaluation"
+echo "========================================================================"
+if bash scripts/eval/eval_passkey.sh "$GPU_MEMORY_UTILIZATION" "$TENSOR_PARALLEL_SIZE"; then
+    echo "✓ Passkey Retrieval evaluation completed successfully"
+else
+    echo "✗ Passkey Retrieval evaluation failed"
+    PASSKEY_FAILED=1
+fi
+echo ""
+
 # Calculate total time
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
@@ -59,16 +71,18 @@ echo "========================================================================"
 echo "Total time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
 echo ""
 
-if [ -z "$LONGBENCH_FAILED" ] && [ -z "$BABILONG_FAILED" ]; then
+if [ -z "$LONGBENCH_FAILED" ] && [ -z "$BABILONG_FAILED" ] && [ -z "$PASSKEY_FAILED" ]; then
     echo "✓ All evaluations completed successfully!"
     echo ""
     echo "Results location:"
-    echo "  - LongBench: results/longbench/"
-    echo "  - Babilong:  results/babilong/"
+    echo "  - LongBench:         results/longbench/"
+    echo "  - Babilong:          results/babilong/"
+    echo "  - Passkey Retrieval: results/passkey_retrieval/"
     exit 0
 else
     echo "Some evaluations failed:"
     [ -n "$LONGBENCH_FAILED" ] && echo "  ✗ LongBench"
     [ -n "$BABILONG_FAILED" ] && echo "  ✗ Babilong"
+    [ -n "$PASSKEY_FAILED" ] && echo "  ✗ Passkey Retrieval"
     exit 1
 fi
