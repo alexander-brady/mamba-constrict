@@ -17,6 +17,11 @@ uv run -m finetune.cli.prepare_data
 
 dir="$SCRATCH/finetune/pg19"
 
+# Check if gsutil is installed
+    if ! command -v gsutil &> /dev/null; then
+        uv pip install gsutil
+    fi
+
 # Create data directory if it doesn't exist
 mkdir -p "$dir"
 cd "$dir"
