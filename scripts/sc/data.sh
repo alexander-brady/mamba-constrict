@@ -16,4 +16,16 @@ source scripts/sc/env.sh
 
 uv run -m finetune.cli.prepare_data
 
+# Create data directory if it doesn't exist
+mkdir -p "$dir"
+cd "$dir"
+
+# Download the datasets using gsutil
+echo "Downloading datasets from gs://deepmind-gutenberg/..."
+gsutil -m cp -r \
+  "gs://deepmind-gutenberg/test" \
+  "gs://deepmind-gutenberg/train" \
+  "gs://deepmind-gutenberg/validation" \
+  .
+
 echo "Finished downloading data at $(date)"
