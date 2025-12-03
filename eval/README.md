@@ -5,7 +5,7 @@ First, add the model paths and maximum context lengths to the configuration file
 Then, you can submit the evaluation job (which will run all benchmarks) using the following command:
 
 ```bash
-sbatch scripts/run_all_evals.sh
+sbatch scripts/eval/run_all.sh
 ```
 
 Happy evaluating!
