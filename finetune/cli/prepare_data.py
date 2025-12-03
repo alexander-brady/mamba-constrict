@@ -25,12 +25,47 @@ def prepare_data(
         split (Literal["train", "validation"]): Dataset split to process.
     """
     # Load dataset
-    ds = datasets.load_dataset(
-        data_cfg.name, split=data_cfg[split].split, trust_remote_code=True
-    )
-    assert isinstance(ds, datasets.Dataset)  # for type checker
+    if data_cfg.get("use_local", False):
+        # Load from local directory (e.g., downloaded Gutenberg/PG-19 data)
+        # Each split folder contains multiple text files
+        local_dir = Path(data_cfg[split].save_dir)
+        logger.info(f"Loading {split} split from local directory: {local_dir}")
 
-    logger.info(f"Loaded {split} split with {len(ds)} samples.")
+        if not local_dir.exists():
+            raise FileNotFoundError(
+                f"Local data directory not found: {local_dir}\n"
+                f"Please run the download script first: ./scripts/download_gutenberg.sh"
+            )
+
+        # Get all text files in the directory
+        text_files = list(local_dir.glob("*.txt"))
+        if not text_files:
+            raise FileNotFoundError(
+                f"No text files found in {local_dir}. "
+                f"Please ensure the data has been downloaded correctly."
+            )
+
+        logger.info(f"Found {len(text_files)} text files in {local_dir}")
+
+        # Load all text files as a dataset
+        # "text" = use the text file loader
+        # data_files key can be anything, we use the actual split name for clarity
+        # split parameter must match the data_files key
+        ds = datasets.load_dataset(
+            "text",
+            data_files={split: [str(f) for f in text_files]},
+            split=split,
+        )
+        assert isinstance(ds, datasets.Dataset)  # for type checker
+
+        logger.info(f"Loaded {split} split with {len(ds)} samples from local files.")
+    else:
+        # Load from HuggingFace Hub
+        ds = datasets.load_dataset(
+            data_cfg.name, split=data_cfg[split].split, trust_remote_code=True
+        )
+        assert isinstance(ds, datasets.Dataset)  # for type checker
+        logger.info(f"Loaded {split} split with {len(ds)} samples from HuggingFace.")
 
     def tokenize(batch):
         enc = tokenizer(
