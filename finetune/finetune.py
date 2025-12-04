@@ -5,12 +5,12 @@ import lightning as L
 import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import (
+from lightning.pytorch.callbacks import (
     DeviceStatsMonitor,
     LearningRateMonitor,
     ModelCheckpoint,
 )
-from pytorch_lightning.loggers import CSVLogger, WandbLogger
+from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from transformers import AutoModelForCausalLM
 
 from .data import load_dataloader
@@ -19,7 +19,7 @@ from .lightning import FineTuner
 logger = logging.getLogger(__name__)
 
 
-@hydra.main(version_base="1.3", config_path="configs", config_name="config")
+@hydra.main(version_base="1.3", config_path="../configs", config_name="config")
 def finetune(cfg: DictConfig):
     # Log Hydra working directory
     hydra_wd = HydraConfig.get().runtime.output_dir
