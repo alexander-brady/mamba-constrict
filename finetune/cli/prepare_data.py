@@ -45,7 +45,7 @@ def prepare_data(
         return {"input_ids": input_ids}
 
     # Apply tokenization
-    ds = ds.map(tokenize, remove_columns=ds.column_names, batched=True)
+    ds = ds.map(tokenize, remove_columns=ds.column_names, batched=True, batch_size=10000, num_proc=8)
 
     block_size = data_cfg.block_size
 
@@ -58,23 +58,20 @@ def prepare_data(
         ids = ids[:total_len]
 
         # Create chunks
-        chunks = [ids[i : i + block_size] for i in range(0, total_len, block_size)]
+        flat = ids[:total_len]
+        chunks = [flat[i:i + block_size] for i in range(0, total_len, block_size)]
+        
         return {"input_ids": chunks, "labels": chunks}
 
     # Pack samples into fixed-size blocks
-    ds = ds.map(pack_samples, batched=True, batch_size=1000)
+    ds = ds.map(pack_samples, batched=True, batch_size=10000, num_proc=8)
 
     # Save processed dataset
     output_dir = Path(data_cfg[split].save_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save each shard as a separate file
-    shards = data_cfg[split].num_shards
-    for shard_id in range(shards):
-        shard = ds.shard(num_shards=shards, index=shard_id, contiguous=True)
-        shard.save_to_disk(output_dir / f"shard_{shard_id}")
-
-    logger.info(f"Saved {shards} shards for {split} to {output_dir}")
+    
+    ds.save_to_disk(output_dir)
+    logger.info(f"Saved dataset for {split} to {output_dir}")
 
 
 @hydra.main(version_base="1.3", config_path="../../configs", config_name="config")

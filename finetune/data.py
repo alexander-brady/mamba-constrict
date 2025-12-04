@@ -1,14 +1,16 @@
-from pathlib import Path
+import torch
 from typing import Literal
 
-from datasets import concatenate_datasets, load_from_disk
+from datasets import load_from_disk
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-from transformers import default_data_collator
 
 
 def collate_fn(batch):
-    return default_data_collator(batch)
+    return {
+        "input_ids": torch.stack([b["input_ids"] for b in batch]),
+        "labels": torch.stack([b["labels"] for b in batch]),
+    }
 
 
 def load_dataloader(data_cfg: DictConfig, split: Literal["train", "validation"]):
@@ -23,15 +25,12 @@ def load_dataloader(data_cfg: DictConfig, split: Literal["train", "validation"])
         DataLoader: A PyTorch DataLoader for the specified data split.
     """
     path = data_cfg[split].save_dir
-    all_paths = sorted(Path(path).glob("shard_*.arrow"))
-
-    # Load all shards
-    datasets = [load_from_disk(str(p)) for p in all_paths]
-    ds = concatenate_datasets(datasets)  # type: ignore
+    ds = load_from_disk(path)
+    ds.set_format(type="torch", columns=["input_ids", "labels"])
 
     # Create dataloader
     dataloader = DataLoader(
-        ds.with_format("torch", columns=["input_ids", "labels"]),
+        ds,
         shuffle=(split == "train"),
         collate_fn=collate_fn,
         **data_cfg.dataloader_kwargs,
