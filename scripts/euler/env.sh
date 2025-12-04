@@ -10,7 +10,7 @@ export HF_HOME="$dir/.hf/"
 export UV_CACHE_DIR="$dir/.uv/"
 export UV_PROJECT_ENVIRONMENT="$dir/.venv"
 
-module load stack/2024-06 gcc/12.2.0 python/3.11.6 cuda/11.3.1 eth_proxy
+module load stack/2024-06 gcc/12.2.0 python/3.11.6 cuda/12.8.0 eth_proxy
 
 # Ensure uv is available
 if ! command -v uv >/dev/null 2>&1; then
