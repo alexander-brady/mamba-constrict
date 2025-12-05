@@ -1,6 +1,7 @@
 defaults:
   - model: mamba2.8
   - optim: adamw
+  - scheduler: cosine
   - data: the_pile
   - loss: default
   - trainer
