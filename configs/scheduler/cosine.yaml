@@ -1,0 +1,10 @@
+_target_: torch.optim.lr_scheduler.SequentialLR
+schedulers:
+  - _target_: torch.optim.lr_scheduler.LinearLR
+    start_factor: 0.17 # MIN_LR / PEAK_LR
+    end_factor: 1.0
+    total_iters: 10 # 10% of max_steps
+  - _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    T_max: 90 # Total steps - warmup steps
+    eta_min: 1e-5
+milestones: [10] # 10% of max_steps
