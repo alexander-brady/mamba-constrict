@@ -57,6 +57,18 @@ else
 fi
 echo ""
 
+# Run PG19 Perplexity evaluation
+echo "========================================================================"
+echo "Starting PG19 Perplexity Evaluation"
+echo "========================================================================"
+if bash scripts/eval/eval_pg19.sh; then
+    echo "✓ PG19 Perplexity evaluation completed successfully"
+else
+    echo "✗ PG19 Perplexity evaluation failed"
+    PG19_FAILED=1
+fi
+echo ""
+
 # Calculate total time
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
@@ -71,18 +83,20 @@ echo "========================================================================"
 echo "Total time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
 echo ""
 
-if [ -z "$LONGBENCH_FAILED" ] && [ -z "$BABILONG_FAILED" ] && [ -z "$PASSKEY_FAILED" ]; then
+if [ -z "$LONGBENCH_FAILED" ] && [ -z "$BABILONG_FAILED" ] && [ -z "$PASSKEY_FAILED" ] && [ -z "$PG19_FAILED" ]; then
     echo "✓ All evaluations completed successfully!"
     echo ""
     echo "Results location:"
     echo "  - LongBench:         results/longbench/"
     echo "  - Babilong:          results/babilong/"
     echo "  - Passkey Retrieval: results/passkey_retrieval/"
+    echo "  - PG19 Perplexity:   results/pg19/"
     exit 0
 else
     echo "Some evaluations failed:"
     [ -n "$LONGBENCH_FAILED" ] && echo "  ✗ LongBench"
     [ -n "$BABILONG_FAILED" ] && echo "  ✗ Babilong"
     [ -n "$PASSKEY_FAILED" ] && echo "  ✗ Passkey Retrieval"
+    [ -n "$PG19_FAILED" ] && echo "  ✗ PG19 Perplexity"
     exit 1
 fi
