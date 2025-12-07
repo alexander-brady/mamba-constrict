@@ -2,7 +2,6 @@
 PG19 Perplexity Evaluation using PyTorch
 
 Calculates perplexity on PG19 test split using sliding window approach.
-Based on the methodology from arXiv 2306.15595.
 """
 
 import argparse
