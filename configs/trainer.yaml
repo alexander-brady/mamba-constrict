@@ -8,3 +8,4 @@ max_steps: 100
 
 enable_progress_bar: false
 log_every_n_steps: 10
+precision: bf16-mixed

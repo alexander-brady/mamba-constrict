@@ -32,7 +32,6 @@ def load_dataloader(data_cfg: DictConfig, split: Literal["train", "validation"])
     dataloader = DataLoader(
         ds,
         shuffle=(split == "train"),
-        collate_fn=collate_fn,
         **data_cfg.dataloader_kwargs,
     )
     return dataloader
