@@ -14,18 +14,24 @@ class FineTuner(L.LightningModule):
         self.model = model
         self.auxiliary_loss = instantiate(self.cfg.loss)
         self.save_hyperparameters(cfg)
+        
+        # Hook to capture last hidden states
+        self._last_hidden = None
+        self.model.backbone.register_forward_hook(
+            lambda module, inp, out: setattr(self, '_last_hidden', out.last_hidden_state)
+        )
 
     def forward(self, **batch):
         return self.model(**batch)
 
     def training_step(self, batch: dict, batch_idx: int):
         # Forward pass with hidden states output
-        outputs = self.model(**batch, output_hidden_states=True, return_dict=True)
+        outputs = self.model(**batch, return_dict=True)
         loss = outputs.loss
 
         # Compute auxiliary loss using hidden states
         auxiliary_loss = self.auxiliary_loss(
-            batch["labels"], outputs.logits, outputs.hidden_states
+            batch["labels"], outputs.logits, self._last_hidden
         )
 
         # Log losses
@@ -41,10 +47,10 @@ class FineTuner(L.LightningModule):
 
     def validation_step(self, batch: dict, batch_idx: int) -> dict[str, float]:
         with torch.inference_mode():
-            outputs = self.model(**batch, output_hidden_states=True)
+            outputs = self.model(**batch, return_dict=True)
             loss = outputs.loss
             auxiliary_loss = self.auxiliary_loss(
-                batch["labels"], outputs.logits, outputs.hidden_states
+                batch["labels"], outputs.logits, self._last_hidden
             )
             accuracy = (outputs.logits.argmax(dim=-1) == batch["labels"]).float().mean()
 

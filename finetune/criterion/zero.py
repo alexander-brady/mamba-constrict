@@ -13,7 +13,7 @@ class EmptyCriterion(Criterion):
         self,
         labels: torch.Tensor,
         logits: torch.Tensor,
-        hidden_states: Sequence[torch.Tensor],
+        last_hidden_state: torch.Tensor,
         **kwargs: Any,
     ) -> float:
         return 0.0

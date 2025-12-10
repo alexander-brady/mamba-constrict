@@ -24,17 +24,17 @@ class Criterion(ABC):
         self,
         labels: torch.Tensor,
         logits: torch.Tensor,
-        hidden_states: Sequence[torch.Tensor],
+        last_hidden_state: torch.Tensor,
         **kwargs: Any,
     ) -> float:
-        return self.weight * self.compute_loss(labels, logits, hidden_states, **kwargs)
+        return self.weight * self.compute_loss(labels, logits, last_hidden_state, **kwargs)
 
     @abstractmethod
     def compute_loss(
         self,
         labels: torch.Tensor,
         logits: torch.Tensor,
-        hidden_states: Sequence[torch.Tensor],
+        last_hidden_state: torch.Tensor,
         **kwargs: Any,
     ) -> float:
         """Compute the auxiliary loss.
@@ -42,7 +42,7 @@ class Criterion(ABC):
         Args:
             labels (torch.Tensor): Ground truth labels.
             logits (torch.Tensor): Model predictions.
-            hidden_states (Sequence[torch.Tensor]): Hidden states from the model.
+            last_hidden_state (torch.Tensor): Last hidden state from the model [B, T, D].
             **kwargs (Any): Additional keyword arguments.
 
         Returns:
