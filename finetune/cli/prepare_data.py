@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def prepare_data(
     data_cfg: DictConfig,
     tokenizer: PreTrainedTokenizer,
-    split: Literal["train", "validation"],
+    split: Literal["train", "validation", "test"],
 ):
     """
     Load, process, and save dataset split for fine-tuning.
@@ -117,9 +117,13 @@ def main(cfg: DictConfig):
         tokenizer.add_special_tokens({"eos_token": "</s>"})
         logger.warning("Added missing EOS token to tokenizer.")
 
-    # Save processed data for train and validation splits
+    # Save processed data for train, validation, and test splits
     prepare_data(cfg.data, tokenizer, split="train")
     prepare_data(cfg.data, tokenizer, split="validation")
+
+    # Prepare test split if it exists in config
+    if "test" in cfg.data:
+        prepare_data(cfg.data, tokenizer, split="test")
 
 
 if __name__ == "__main__":

@@ -13,8 +13,6 @@ echo "Beginning downloading data at $(date)"
 
 source scripts/euler/env.sh
 
-uv run -m finetune.cli.prepare_data
-
 dir="$SCRATCH/finetune/pg19"
 
 # Check if gsutil is installed
@@ -24,14 +22,22 @@ dir="$SCRATCH/finetune/pg19"
 
 # Create data directory if it doesn't exist
 mkdir -p "$dir"
-cd "$dir"
+pushd "$dir"
 
-# Download the datasets using gsutil
-echo "Downloading datasets from gs://deepmind-gutenberg/..."
-gsutil -m cp -r \
-  "gs://deepmind-gutenberg/test" \
-  "gs://deepmind-gutenberg/train" \
-  "gs://deepmind-gutenberg/validation" \
-  .
+if [ -d "test" ] && [ -d "train" ] && [ -d "validation" ]; then
+    echo "Data already exists in $dir, skipping download."
+else
+    # Download the datasets using gsutil
+    echo "Downloading datasets from gs://deepmind-gutenberg/..."
+    gsutil -m cp -r \
+      "gs://deepmind-gutenberg/test" \
+      "gs://deepmind-gutenberg/train" \
+      "gs://deepmind-gutenberg/validation" \
+      .
+fi
+
+popd
+
+uv run -m finetune.cli.prepare_data
 
 echo "Finished downloading data at $(date)"
