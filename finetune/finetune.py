@@ -4,13 +4,13 @@ import hydra
 import lightning as L
 import torch
 from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf
 from lightning.pytorch.callbacks import (
     DeviceStatsMonitor,
     LearningRateMonitor,
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
+from omegaconf import DictConfig, OmegaConf
 from transformers import AutoModelForCausalLM
 
 from .data import load_dataloader
