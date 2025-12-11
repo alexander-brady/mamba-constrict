@@ -1,6 +1,6 @@
-import torch
 from typing import Literal
 
+import torch
 from datasets import load_from_disk
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader

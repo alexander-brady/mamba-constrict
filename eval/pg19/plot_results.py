@@ -7,10 +7,9 @@ Creates visualizations of perplexity vs context length, similar to the GovReport
 import argparse
 import json
 import os
-from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
-from collections import defaultdict
 
 
 def load_results(results_dir):
@@ -51,14 +50,14 @@ def plot_single_model(model_name, results, output_path, title_prefix="PG19"):
     ax.plot(
         context_lengths,
         perplexities,
-        marker='o',
+        marker="o",
         linewidth=2,
         markersize=8,
-        color='#d62728',  # Red color similar to the image
+        color="#d62728",  # Red color similar to the image
     )
 
     # Set log scale for y-axis
-    ax.set_yscale('log')
+    ax.set_yscale("log")
 
     # Set x-axis to powers of 2
     # Find appropriate power of 2 ticks
@@ -72,29 +71,33 @@ def plot_single_model(model_name, results, output_path, title_prefix="PG19"):
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_tick_labels)
-    ax.set_xscale('log', base=2)
+    ax.set_xscale("log", base=2)
 
     # Labels and title
-    ax.set_xlabel('Context Length', fontsize=12, fontweight='bold')
-    ax.set_ylabel('PPL', fontsize=12, fontweight='bold')
+    ax.set_xlabel("Context Length", fontsize=12, fontweight="bold")
+    ax.set_ylabel("PPL", fontsize=12, fontweight="bold")
 
     # Extract model name for title (e.g., "Mamba-1.4B" from path)
-    model_display_name = model_name.split('/')[-1] if '/' in model_name else model_name
-    ax.set_title(f'{title_prefix}\n{model_display_name}', fontsize=14, fontweight='bold')
+    model_display_name = model_name.split("/")[-1] if "/" in model_name else model_name
+    ax.set_title(
+        f"{title_prefix}\n{model_display_name}", fontsize=14, fontweight="bold"
+    )
 
     # Grid
-    ax.grid(True, which='both', alpha=0.3, linestyle='-', linewidth=0.5)
+    ax.grid(True, which="both", alpha=0.3, linestyle="-", linewidth=0.5)
 
     # Tight layout
     plt.tight_layout()
 
     # Save
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"Saved plot to: {output_path}")
     plt.close()
 
 
-def plot_multiple_models(results_by_model, output_path, title="PG19 Perplexity Comparison"):
+def plot_multiple_models(
+    results_by_model, output_path, title="PG19 Perplexity Comparison"
+):
     """
     Plot perplexity vs context length for multiple models on the same plot.
     """
@@ -109,13 +112,15 @@ def plot_multiple_models(results_by_model, output_path, title="PG19 Perplexity C
         perplexities = [r["perplexity"] for r in results]
 
         # Get display name
-        model_display_name = model_name.split('/')[-1] if '/' in model_name else model_name
+        model_display_name = (
+            model_name.split("/")[-1] if "/" in model_name else model_name
+        )
 
         # Plot
         ax.plot(
             context_lengths,
             perplexities,
-            marker='o',
+            marker="o",
             linewidth=2,
             markersize=8,
             color=colors[idx],
@@ -123,7 +128,7 @@ def plot_multiple_models(results_by_model, output_path, title="PG19 Perplexity C
         )
 
     # Set log scale for y-axis
-    ax.set_yscale('log')
+    ax.set_yscale("log")
 
     # Set x-axis to powers of 2
     all_ctx = []
@@ -140,31 +145,31 @@ def plot_multiple_models(results_by_model, output_path, title="PG19 Perplexity C
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_tick_labels)
-    ax.set_xscale('log', base=2)
+    ax.set_xscale("log", base=2)
 
     # Labels and title
-    ax.set_xlabel('Context Length', fontsize=12, fontweight='bold')
-    ax.set_ylabel('PPL', fontsize=12, fontweight='bold')
-    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.set_xlabel("Context Length", fontsize=12, fontweight="bold")
+    ax.set_ylabel("PPL", fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=14, fontweight="bold")
 
     # Legend
-    ax.legend(loc='best', fontsize=10)
+    ax.legend(loc="best", fontsize=10)
 
     # Grid
-    ax.grid(True, which='both', alpha=0.3, linestyle='-', linewidth=0.5)
+    ax.grid(True, which="both", alpha=0.3, linestyle="-", linewidth=0.5)
 
     # Tight layout
     plt.tight_layout()
 
     # Save
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"Saved comparison plot to: {output_path}")
     plt.close()
 
 
 def create_summary_table(results_by_model, output_path):
     """Create a summary table of results."""
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         # Get all unique context lengths
         all_ctx_lengths = set()
         for results in results_by_model.values():
@@ -180,7 +185,9 @@ def create_summary_table(results_by_model, output_path):
             ppl_by_ctx = {r["context_length"]: r["perplexity"] for r in results}
 
             # Get display name
-            model_display_name = model_name.split('/')[-1] if '/' in model_name else model_name
+            model_display_name = (
+                model_name.split("/")[-1] if "/" in model_name else model_name
+            )
 
             # Write row
             row = [model_display_name]
@@ -195,9 +202,7 @@ def create_summary_table(results_by_model, output_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Plot PG19 perplexity results"
-    )
+    parser = argparse.ArgumentParser(description="Plot PG19 perplexity results")
     parser.add_argument(
         "--results_dir",
         "-r",
@@ -238,7 +243,7 @@ def main():
 
     # Create plots for each model
     for model_name, results in results_by_model.items():
-        model_safe_name = model_name.replace('/', '_')
+        model_safe_name = model_name.replace("/", "_")
         output_path = os.path.join(output_dir, f"{model_safe_name}_perplexity.png")
         plot_single_model(model_name, results, output_path, title_prefix=args.title)
 
@@ -246,9 +251,7 @@ def main():
     if len(results_by_model) > 1:
         output_path = os.path.join(output_dir, "perplexity_comparison.png")
         plot_multiple_models(
-            results_by_model,
-            output_path,
-            title=f"{args.title} Perplexity Comparison"
+            results_by_model, output_path, title=f"{args.title} Perplexity Comparison"
         )
 
     # Create summary table

@@ -11,11 +11,10 @@ import sys
 from pathlib import Path
 
 import torch
-import numpy as np
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_from_disk
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -44,7 +43,7 @@ def calculate_perplexity(model, dataloader, context_length, device, stride=512):
 
             # Process each sequence in batch
             for seq_idx in range(input_ids.size(0)):
-                labels = input_ids[seq_idx:seq_idx + 1]
+                labels = input_ids[seq_idx : seq_idx + 1]
                 seq_len = labels.size(1)
 
                 prev_end_loc = 0
@@ -69,7 +68,9 @@ def calculate_perplexity(model, dataloader, context_length, device, stride=512):
                     # Count tokens that contributed to loss
                     num_valid_tokens = (target_ids != -100).sum().item()
                     batch_size = target_ids.size(0)
-                    num_loss_tokens = num_valid_tokens - batch_size  # account for internal shift
+                    num_loss_tokens = (
+                        num_valid_tokens - batch_size
+                    )  # account for internal shift
 
                     # Accumulate weighted by number of tokens
                     nll_sum += neg_log_likelihood * num_loss_tokens
@@ -80,7 +81,7 @@ def calculate_perplexity(model, dataloader, context_length, device, stride=512):
                         break
 
     # Calculate perplexity
-    avg_nll = nll_sum / n_tokens if n_tokens > 0 else float('inf')
+    avg_nll = nll_sum / n_tokens if n_tokens > 0 else float("inf")
     ppl = torch.exp(avg_nll).item()
 
     return {
@@ -93,10 +94,17 @@ def calculate_perplexity(model, dataloader, context_length, device, stride=512):
 def main():
     parser = argparse.ArgumentParser(description="Calculate perplexity on PG19")
     parser.add_argument("--model", "-m", required=True, help="Model name from config")
-    parser.add_argument("--data_dir", "-d", required=True, help="Path to prepared test data")
+    parser.add_argument(
+        "--data_dir", "-d", required=True, help="Path to prepared test data"
+    )
     parser.add_argument("--save_dir", "-s", default="results", help="Results directory")
-    parser.add_argument("--context_lengths", "-c", type=int, nargs="+",
-                       default=[512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072])
+    parser.add_argument(
+        "--context_lengths",
+        "-c",
+        type=int,
+        nargs="+",
+        default=[512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072],
+    )
     parser.add_argument("--stride", type=int, default=512, help="Sliding window stride")
     parser.add_argument("--batch_size", "-b", type=int, default=1)
     args = parser.parse_args()
@@ -155,9 +163,9 @@ def main():
                 f.flush()
                 continue
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"Evaluating context length: {ctx_len}")
-            print('='*60)
+            print("=" * 60)
 
             result = calculate_perplexity(
                 model, dataloader, ctx_len, device, stride=args.stride
@@ -172,14 +180,16 @@ def main():
             f.flush()
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
-    print('='*60)
+    print("=" * 60)
     print(f"{'Context':<12} {'Perplexity':<12} {'Tokens':<12}")
-    print('-'*60)
+    print("-" * 60)
     for r in results:
-        print(f"{r['context_length']:<12} {r['perplexity']:<12.2f} {r['total_tokens']:<12,}")
-    print('='*60)
+        print(
+            f"{r['context_length']:<12} {r['perplexity']:<12.2f} {r['total_tokens']:<12,}"
+        )
+    print("=" * 60)
     print(f"Results saved to: {out_file}")
 
 

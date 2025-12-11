@@ -20,7 +20,6 @@ import json
 import os
 import re
 import time
-from pathlib import Path
 
 import tiktoken
 from numpy import random
@@ -30,9 +29,7 @@ from transformers import AutoTokenizer
 
 # Load configuration files
 model_map = json.loads(open("../config/model2path.json", encoding="utf-8").read())
-maxlen_map = json.loads(
-    open("../config/model2maxlen.json", encoding="utf-8").read()
-)
+maxlen_map = json.loads(open("../config/model2maxlen.json", encoding="utf-8").read())
 
 URL = os.getenv("VLLM_URL")
 API_KEY = os.getenv("VLLM_API_KEY")
@@ -209,11 +206,13 @@ def run_passkey_test(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Passkey Retrieval Test with vLLM"
-    )
+    parser = argparse.ArgumentParser(description="Passkey Retrieval Test with vLLM")
     parser.add_argument(
-        "--save_dir", "-s", type=str, default="results", help="Directory to save results"
+        "--save_dir",
+        "-s",
+        type=str,
+        default="results",
+        help="Directory to save results",
     )
     parser.add_argument(
         "--model",
@@ -227,7 +226,21 @@ def main():
         "-n",
         type=int,
         nargs="+",
-        default=[0, 100, 500, 1000, 5000, 8000, 10000, 12000, 14000, 18000, 20000, 25000, 38000],
+        default=[
+            0,
+            100,
+            500,
+            1000,
+            5000,
+            8000,
+            10000,
+            12000,
+            14000,
+            18000,
+            20000,
+            25000,
+            38000,
+        ],
         help="List of garbage text lengths to test",
     )
     parser.add_argument(
