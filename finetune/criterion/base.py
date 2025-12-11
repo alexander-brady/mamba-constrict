@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from typing import Any
 
 import torch
 
@@ -20,28 +18,14 @@ class Criterion(ABC):
         super().__init__()
         self.weight = weight
 
-    def __call__(
-        self,
-        labels: torch.Tensor,
-        logits: torch.Tensor,
-        last_hidden_state: torch.Tensor,
-        **kwargs: Any,
-    ) -> float:
-        return self.weight * self.compute_loss(labels, logits, last_hidden_state, **kwargs)
+    def __call__(self, last_hidden_state: torch.Tensor) -> float:
+        return self.weight * self.compute_loss(last_hidden_state)
 
     @abstractmethod
-    def compute_loss(
-        self,
-        labels: torch.Tensor,
-        logits: torch.Tensor,
-        last_hidden_state: torch.Tensor,
-        **kwargs: Any,
-    ) -> float:
+    def compute_loss(self, last_hidden_state: torch.Tensor) -> float:
         """Compute the auxiliary loss.
 
         Args:
-            labels (torch.Tensor): Ground truth labels.
-            logits (torch.Tensor): Model predictions.
             last_hidden_state (torch.Tensor): Last hidden state from the model [B, T, D].
             **kwargs (Any): Additional keyword arguments.
 
