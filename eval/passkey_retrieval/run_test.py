@@ -200,7 +200,11 @@ def main():
         description="Passkey Retrieval Test with Local Models"
     )
     parser.add_argument(
-        "--save_dir", "-s", type=str, default="results", help="Directory to save results"
+        "--save_dir",
+        "-s",
+        type=str,
+        default="results",
+        help="Directory to save results",
     )
     parser.add_argument(
         "--model",

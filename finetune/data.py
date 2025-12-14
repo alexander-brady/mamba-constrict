@@ -1,6 +1,6 @@
-import torch
 from typing import Literal
 
+import torch
 from datasets import load_from_disk
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
@@ -32,7 +32,6 @@ def load_dataloader(data_cfg: DictConfig, split: Literal["train", "validation"])
     dataloader = DataLoader(
         ds,
         shuffle=(split == "train"),
-        collate_fn=collate_fn,
         **data_cfg.dataloader_kwargs,
     )
     return dataloader
