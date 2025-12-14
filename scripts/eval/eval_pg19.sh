@@ -11,10 +11,12 @@
 #SBATCH --gres=gpumem:32g
 #SBATCH --mail-type=END,FAIL
 
-# Usage: sbatch scripts/eval/eval_pg19.sh [data_dir]
-# Or: ./scripts/eval/eval_pg19.sh [data_dir]
+# Usage: sbatch scripts/eval/eval_pg19.sh [raw_data_dir]
+# Or: ./scripts/eval/eval_pg19.sh [raw_data_dir]
+# Note: Expects raw .txt files from PG19 test split (not preprocessed data)
 
-# Get PG19 test data directory from argument or environment variable
+# Get PG19 raw test data directory from argument or environment variable
+# This should point to the folder containing raw .txt files
 DATA_DIR=${1:-${SCRATCH}/finetune/data/pg19/test}
 
 # Source environment
@@ -39,8 +41,8 @@ mkdir -p "$RESULTS_FOLDER"
 # Get list of models from config
 MODEL_NAMES=$(python3 -c 'import json; print(" ".join([k for k in json.load(open("eval/config/model2path.json")).keys() if not k.startswith("_")]))')
 
-# Context lengths to evaluate (powers of 2)
-CONTEXT_LENGTHS="512 1024 2048 4096 8192 16384 32768 65536 131072"
+# Context lengths to evaluate (powers of 2, up to 256k)
+CONTEXT_LENGTHS="2048 4096 8192 16384 32768 65536 131072 262144"
 
 for MODEL_NAME in $MODEL_NAMES; do
     MODEL_PATH=$(python3 -c "import json; print(json.load(open('eval/config/model2path.json'))['$MODEL_NAME'])")
@@ -69,8 +71,7 @@ for MODEL_NAME in $MODEL_NAMES; do
         --data_dir "$DATA_DIR" \
         --save_dir "../../$RESULTS_FOLDER" \
         --context_lengths $VALID_CONTEXT_LENGTHS \
-        --stride 512 \
-        --batch_size 1
+        --stride 512
 
     popd > /dev/null
 

@@ -212,45 +212,75 @@ def prepare_data(
         assert isinstance(ds, datasets.Dataset)  # for type checker
         logger.info(f"Loaded {split} split with {len(ds)} samples from HuggingFace.")
 
-    def tokenize(batch):
-        enc = tokenizer(
-            batch["text"],
-            truncation=False,
-            return_attention_mask=False,
+    block_size = data_cfg.block_size
+    use_truncation = data_cfg[split].get("use_truncation", False)
+
+    if use_truncation:
+        # Truncate/pad each sample to fixed block_size
+        logger.info(f"Using truncation mode: each sample will be exactly {block_size} tokens")
+
+        def tokenize(batch):
+            # Tokenize with truncation and padding to fixed length
+            enc = tokenizer(
+                batch["text"],
+                truncation=True,
+                max_length=block_size,
+                padding="max_length",
+                return_attention_mask=False,
+            )
+
+            # Labels are the same as input_ids for causal language modeling
+            return {"input_ids": enc["input_ids"], "labels": enc["input_ids"]}
+
+        # Apply tokenization
+        ds = ds.map(
+            tokenize,
+            remove_columns=ds.column_names,
+            batched=True,
+            batch_size=10000,
+            num_proc=8,
+        )
+    else:
+        # Pack multiple samples into fixed-size blocks (original behavior)
+        logger.info(f"Using packing mode: concatenating and chunking into {block_size} token blocks")
+
+        def tokenize(batch):
+            enc = tokenizer(
+                batch["text"],
+                truncation=False,
+                return_attention_mask=False,
+            )
+
+            # append eos for each sequence
+            input_ids = [ids + [tokenizer.eos_token_id] for ids in enc["input_ids"]]
+
+            return {"input_ids": input_ids}
+
+        # Apply tokenization
+        ds = ds.map(
+            tokenize,
+            remove_columns=ds.column_names,
+            batched=True,
+            batch_size=10000,
+            num_proc=8,
         )
 
-        # append eos for each sequence
-        input_ids = [ids + [tokenizer.eos_token_id] for ids in enc["input_ids"]]
+        def pack_samples(samples):
+            # concatenate then chunk
+            ids = list(itertools.chain.from_iterable(samples["input_ids"]))
 
-        return {"input_ids": input_ids}
+            # Trim to a multiple of block_size
+            total_len = (len(ids) // block_size) * block_size
+            ids = ids[:total_len]
 
-    # Apply tokenization
-    ds = ds.map(
-        tokenize,
-        remove_columns=ds.column_names,
-        batched=True,
-        batch_size=10000,
-        num_proc=8,
-    )
+            # Create chunks
+            flat = ids[:total_len]
+            chunks = [flat[i : i + block_size] for i in range(0, total_len, block_size)]
 
-    block_size = data_cfg.block_size
+            return {"input_ids": chunks, "labels": chunks}
 
-    def pack_samples(samples):
-        # concatenate then chunk
-        ids = list(itertools.chain.from_iterable(samples["input_ids"]))
-
-        # Trim to a multiple of block_size
-        total_len = (len(ids) // block_size) * block_size
-        ids = ids[:total_len]
-
-        # Create chunks
-        flat = ids[:total_len]
-        chunks = [flat[i : i + block_size] for i in range(0, total_len, block_size)]
-
-        return {"input_ids": chunks, "labels": chunks}
-
-    # Pack samples into fixed-size blocks
-    ds = ds.map(pack_samples, batched=True, batch_size=10000, num_proc=8)
+        # Pack samples into fixed-size blocks
+        ds = ds.map(pack_samples, batched=True, batch_size=10000, num_proc=8)
 
     # Save processed dataset
     output_dir = Path(data_cfg[split].save_dir)
@@ -272,9 +302,6 @@ def main(cfg: DictConfig):
     prepare_data(cfg.data, tokenizer, split="train")
     prepare_data(cfg.data, tokenizer, split="validation")
 
-    # Prepare test split if it exists in config
-    if "test" in cfg.data:
-        prepare_data(cfg.data, tokenizer, split="test")
 
 
 if __name__ == "__main__":
