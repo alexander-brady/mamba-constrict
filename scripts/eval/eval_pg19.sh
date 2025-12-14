@@ -8,7 +8,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --gres=gpumem:64g
+#SBATCH --gres=gpumem:32g
 #SBATCH --mail-type=END,FAIL
 
 # Usage: sbatch scripts/eval/eval_pg19.sh [data_dir]
@@ -18,8 +18,8 @@
 DATA_DIR=${1:-${SCRATCH}/finetune/data/pg19/test}
 
 # Source environment
-if [ -f "scripts/env.sh" ]; then
-    source scripts/env.sh
+if [ -f "scripts/euler/env.sh" ]; then
+    source scripts/euler/env.sh
 fi
 
 echo "PG19 Perplexity Evaluation"

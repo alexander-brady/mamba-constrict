@@ -974,6 +974,7 @@ requires-dist = [
     { name = "lightning", specifier = ">=2.5.6" },
     { name = "mamba-ssm", specifier = ">=2.2.6.post3" },
     { name = "transformers", specifier = ">=4.57.1" },
+    { name = "vllm", specifier = ">=0.10" },
     { name = "vllm", specifier = ">=0.11.2" },
     { name = "wandb", specifier = ">=0.23.1" },
     { name = "zstandard", specifier = ">=0.25.0" },

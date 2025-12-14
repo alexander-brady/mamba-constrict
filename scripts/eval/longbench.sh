@@ -8,7 +8,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --gres=gpumem:64g
+#SBATCH --gres=gpumem:32g
 #SBATCH --mail-type=END,FAIL
 
 # Usage: sbatch scripts/longbench.sh [gpu_memory_utilization] [tensor_parallel_size]
@@ -17,9 +17,12 @@ GPU_MEMORY_UTILIZATION=${1:-0.95}
 TENSOR_PARALLEL_SIZE=${2:-1}
 
 # Source environment
-if [ -f "scripts/env.sh" ]; then
-    source scripts/env.sh
+if [ -f "scripts/euler/env.sh" ]; then
+    source scripts/euler/env.sh
 fi
+
+# Enable verbose vLLM logging
+export VLLM_LOGGING_LEVEL=DEBUG
 
 # Set up random port and key to avoid conflicts
 PORT=8000
@@ -49,17 +52,33 @@ for MODEL_NAME in $MODEL_NAMES; do
         --port $PORT \
         --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
         --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
+        --no-enable-chunked-prefill \
         --max_model_len $MAX_LEN \
-        --trust-remote-code &
+        --trust-remote-code 2>&1 &
 
     VLLM_PID=$!
 
-    # Wait for vLLM to be ready
+    # Wait for vLLM to be ready (no time limit - wait until process dies or API responds)
     echo "Waiting for vLLM to be ready..."
-    timeout 600 bash -c "until curl -s $VLLM_URL/models > /dev/null; do sleep 10; done"
-    if [ $? -ne 0 ]; then
+    i=0
+    while true; do
+        i=$((i + 1))
+        if ! kill -0 $VLLM_PID 2>/dev/null; then
+            echo "vLLM process died unexpectedly!"
+            wait $VLLM_PID
+            echo "Exit code: $?"
+            break
+        fi
+        if curl -s $VLLM_URL/models > /dev/null 2>&1; then
+            echo "vLLM is ready!"
+            break
+        fi
+        echo "Waiting... ($i)"
+        sleep 10
+    done
+    if ! curl -s $VLLM_URL/models > /dev/null 2>&1; then
         echo "vLLM failed to start for $MODEL_NAME."
-        kill $VLLM_PID
+        kill $VLLM_PID 2>/dev/null || true
         continue
     fi
     echo "vLLM is ready!"

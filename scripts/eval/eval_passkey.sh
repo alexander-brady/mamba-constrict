@@ -8,27 +8,16 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --gres=gpumem:64g
+#SBATCH --gres=gpumem:32g
 #SBATCH --mail-type=END,FAIL
 
-# Usage: sbatch scripts/eval/eval_passkey.sh [gpu_memory_utilization] [tensor_parallel_size]
-# Or: ./scripts/eval/eval_passkey.sh [gpu_memory_utilization] [tensor_parallel_size]
-
-GPU_MEMORY_UTILIZATION=${1:-0.95}
-TENSOR_PARALLEL_SIZE=${2:-1}
+# Usage: sbatch scripts/eval/eval_passkey.sh
+# Or: ./scripts/eval/eval_passkey.sh
 
 # Source environment
-if [ -f "scripts/env.sh" ]; then
-    source scripts/env.sh
+if [ -f "scripts/euler/env.sh" ]; then
+    source scripts/euler/env.sh
 fi
-
-# Set up random port and key to avoid conflicts
-PORT=8000
-export VLLM_API_KEY="token-$(date +%s)"
-export VLLM_URL="http://localhost:$PORT/v1"
-
-echo "Port: $PORT"
-echo "URL: $VLLM_URL"
 
 # Results folder
 RESULTS_FOLDER="./results/passkey_retrieval"
@@ -46,44 +35,17 @@ for MODEL_NAME in $MODEL_NAMES; do
     echo "Max Length: $MAX_LEN"
     echo "================================================================"
 
-    # Start vLLM
-    echo "Starting vLLM server for $MODEL_NAME..."
-    vllm serve $MODEL_PATH \
-        --api-key $VLLM_API_KEY \
-        --port $PORT \
-        --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
-        --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
-        --max_model_len $MAX_LEN \
-        --trust-remote-code &
-
-    VLLM_PID=$!
-
-    # Wait for vLLM to be ready
-    echo "Waiting for vLLM to be ready..."
-    timeout 600 bash -c "until curl -s $VLLM_URL/models > /dev/null; do sleep 10; done"
-    if [ $? -ne 0 ]; then
-        echo "vLLM failed to start for $MODEL_NAME."
-        kill $VLLM_PID
-        continue
-    fi
-    echo "vLLM is ready!"
-
     # Run passkey retrieval test
     pushd eval/passkey_retrieval > /dev/null
     python run_test.py \
         --model $MODEL_NAME \
         --save_dir ../../$RESULTS_FOLDER \
+        --token_lengths 2048 4096 8192 16384 32768 65536 131072 262144 \
         --num_tests 50
 
     # Export results
     python result.py --results_dir ../../$RESULTS_FOLDER
     popd > /dev/null
-
-    # Cleanup
-    kill $VLLM_PID
-
-    # Wait a bit to ensure port is freed
-    sleep 10
 done
 
 echo "All models processed!"

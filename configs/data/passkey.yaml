@@ -1,0 +1,26 @@
+name: passkey
+use_passkey: true  # Flag to indicate passkey dataset
+data_dir: ${oc.env:SCRATCH}/finetune/data/${.name}
+
+# Passkey-specific parameters
+block_size: 2048
+num_samples: 1000  # Total number of passkey samples to generate
+min_depth: 0.0     # Minimum depth (0 = start of sequence)
+max_depth: 1.0     # Maximum depth (1 = end of sequence)
+
+train:
+  split: train
+  num_samples: 900  # 90% for training
+  save_dir: ${..data_dir}/train/
+
+validation:
+  split: validation
+  num_samples: 100  # 10% for validation
+  save_dir: ${..data_dir}/validation/
+
+dataloader_kwargs:
+  num_workers: 2
+  batch_size: 8
+  persistent_workers: true
+  prefetch_factor: 4
+  pin_memory: true
