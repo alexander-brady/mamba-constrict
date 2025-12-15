@@ -13,7 +13,7 @@ echo "Beginning downloading data at $(date)"
 
 source scripts/euler/env.sh
 
-dir="$SCRATCH/finetune/pg19"
+dir="$SCRATCH/finetune/data/pg19"
 
 # Check if gsutil is installed
     if ! command -v gsutil &> /dev/null; then

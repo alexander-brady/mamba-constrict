@@ -1,7 +1,7 @@
 [project]
 name = "finetune"
 version = "0.1.0"
-description = "Dyanmic regularization for long-context Mamba finetuning"
+description = "Dynamic regularization for long-context Mamba finetuning"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
     "vllm>=0.11.2",
     "wandb>=0.23.1",
     "zstandard>=0.25.0",
+    "vllm>=0.10"
 ]
 
 [dependency-groups]

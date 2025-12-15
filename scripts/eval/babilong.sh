@@ -1,4 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#SBATCH --job-name=babilong_eval
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --ntasks=1
+#SBATCH --tmp=64G
+#SBATCH --mem-per-cpu=64G
+#SBATCH --gpus-per-node=1
+#SBATCH --nodes=1
+#SBATCH --time=24:00:00
+#SBATCH --gres=gpumem:32g
+#SBATCH --mail-type=END,FAIL
+
 # Usage: ./scripts/eval/babilong.sh [tensor_parallel_size]
 # Example: CUDA_VISIBLE_DEVICES=0,1 ./scripts/eval/babilong.sh 2
 set -e
@@ -26,9 +38,12 @@ cleanup() {
 }
 
 # Source environment
-if [ -f "scripts/env.sh" ]; then
-    source scripts/env.sh
+if [ -f "scripts/euler/env.sh" ]; then
+    source scripts/euler/env.sh
 fi
+
+# Enable verbose vLLM logging
+export VLLM_LOGGING_LEVEL=DEBUG
 
 # API configuration
 VLLM_API_HOST="${VLLM_API_HOST:-localhost}"
@@ -54,8 +69,8 @@ for MODEL_NAME in $MODEL_NAMES; do
 
     # Start the vLLM server in the background
     echo "Starting vLLM server for $MODEL_NAME..."
-    vllm serve "$MODEL_PATH" --enable-chunked-prefill=False --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
-        --served-model-name "$MODEL_NAME" --host "${VLLM_API_HOST}" --port "${VLLM_API_PORT}" --disable-log-requests &
+    vllm serve "$MODEL_PATH" --no-enable-chunked-prefill --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
+        --served-model-name "$MODEL_NAME" --host "${VLLM_API_HOST}" --port "${VLLM_API_PORT}" &
 
     VLLM_PID=$!
     echo "vLLM PID: $VLLM_PID"

@@ -34,15 +34,18 @@ def query_llm(
 ):
     # truncate
     max_len = maxlen_map[model]
+    # Ensure we leave space for the generated tokens
+    max_input_len = max_len - max_new_tokens
+    
     if model in model_map:
         input_ids = tokenizer.encode(prompt)
-        if len(input_ids) > max_len:
-            input_ids = input_ids[: max_len // 2] + input_ids[-max_len // 2 :]
+        if len(input_ids) > max_input_len:
+            input_ids = input_ids[: max_input_len // 2] + input_ids[-max_input_len // 2 :]
             prompt = tokenizer.decode(input_ids, skip_special_tokens=True)
     else:
         input_ids = tokenizer.encode(prompt, disallowed_special=())
-        if len(input_ids) > max_len:
-            input_ids = input_ids[: max_len // 2] + input_ids[-max_len // 2 :]
+        if len(input_ids) > max_input_len:
+            input_ids = input_ids[: max_input_len // 2] + input_ids[-max_input_len // 2 :]
             prompt = tokenizer.decode(input_ids)
     tries = 0
     if model in model_map:
@@ -50,13 +53,14 @@ def query_llm(
     while tries < 5:
         tries += 1
         try:
-            completion = client.chat.completions.create(
+            # Use completions API for base models (no chat template required)
+            completion = client.completions.create(
                 model=model,
-                messages=[{"role": "user", "content": prompt}],
+                prompt=prompt,
                 temperature=temperature,
                 max_tokens=max_new_tokens,
             )
-            return completion.choices[0].message.content
+            return completion.choices[0].text
         except KeyboardInterrupt as e:
             raise e
         except Exception as e:

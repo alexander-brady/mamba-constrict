@@ -8,11 +8,13 @@ train:
   split: train
   num_shards: 2
   save_dir: ${..data_dir}/train/
+  use_truncation: true  # Truncate/pad to block_size instead of packing
 
 validation:
   split: validation
   num_shards: 1
   save_dir: ${..data_dir}/validation/
+  use_truncation: true  # Truncate/pad to block_size instead of packing
 
 test:
   split: test

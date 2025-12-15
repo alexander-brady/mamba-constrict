@@ -19,92 +19,70 @@ import argparse
 import json
 import os
 import re
-import time
+from pathlib import Path
 
-import tiktoken
-from numpy import random
-from openai import OpenAI
+import torch
 from tqdm import tqdm
-from transformers import AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from passkey_utils import generate_prompt_random_depth
 
 # Load configuration files
 model_map = json.loads(open("../config/model2path.json", encoding="utf-8").read())
-maxlen_map = json.loads(open("../config/model2maxlen.json", encoding="utf-8").read())
+maxlen_map = json.loads(
+    open("../config/model2maxlen.json", encoding="utf-8").read()
+)
 
-URL = os.getenv("VLLM_URL")
-API_KEY = os.getenv("VLLM_API_KEY")
+
+def calc_str_length(token_length, letters_per_token=3.65):
+    """Calculate approximate character length from token length."""
+    return int(token_length * letters_per_token)
 
 
 def generate_prompt(n_garbage, seed=None):
     """Generates a text file and inserts an execute line at a random position."""
-    if seed is not None:
-        random.seed(seed)
-
-    n_garbage_prefix = random.randint(0, n_garbage)
-    n_garbage_suffix = n_garbage - n_garbage_prefix
-
-    task_description = "There is an important info hidden inside a lot of irrelevant text. Find it and memorize them. I will quiz you about the important information there."
-    garbage = "The grass is green. The sky is blue. The sun is yellow. Here we go. There and back again."
-    garbage_inf = " ".join([garbage] * 2000)
-    assert len(garbage_inf) >= n_garbage
-    garbage_prefix = garbage_inf[:n_garbage_prefix]
-    garbage_suffix = garbage_inf[:n_garbage_suffix]
-    pass_key = random.randint(1, 50000)
-    information_line = (
-        f"The pass key is {pass_key}. Remember it. {pass_key} is the pass key."
-    )
-    final_question = "What is the pass key? The pass key is"
-    lines = [
-        task_description,
-        garbage_prefix,
-        information_line,
-        garbage_suffix,
-        final_question,
-    ]
-    return "\n".join(lines), pass_key
+    return generate_prompt_random_depth(n_garbage, seed)
 
 
 def query_llm(
     prompt,
+    model_name,
     model,
     tokenizer,
-    client=None,
+    device,
     temperature=0.0,
     max_new_tokens=10,
 ):
-    """Query the LLM via vLLM API."""
-    max_len = maxlen_map.get(model, 128000)
-    if model in model_map:
-        input_ids = tokenizer.encode(prompt)
-        if len(input_ids) > max_len:
-            input_ids = input_ids[: max_len // 2] + input_ids[-max_len // 2 :]
-            prompt = tokenizer.decode(input_ids, skip_special_tokens=True)
-    else:
-        input_ids = tokenizer.encode(prompt, disallowed_special=())
-        if len(input_ids) > max_len:
-            input_ids = input_ids[: max_len // 2] + input_ids[-max_len // 2 :]
-            prompt = tokenizer.decode(input_ids)
+    """Query the LLM using local model."""
+    max_len = maxlen_map.get(model_name, 128000)
 
-    tries = 0
-    model_name = model_map[model] if model in model_map else model
-    while tries < 5:
-        tries += 1
-        try:
-            completion = client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_new_tokens,
-            )
-            return completion.choices[0].message.content
-        except KeyboardInterrupt as e:
-            raise e
-        except Exception as e:
-            print(f'Error Occurs: "{str(e)}"        Retry ...')
-            time.sleep(1)
-    else:
-        print("Max tries. Failed.")
-        return ""
+    # Tokenize and truncate if necessary
+    input_ids = tokenizer.encode(prompt, return_tensors="pt")
+    if input_ids.size(1) > max_len:
+        # Keep first and last half
+        half_len = max_len // 2
+        input_ids = torch.cat([
+            input_ids[:, :half_len],
+            input_ids[:, -half_len:]
+        ], dim=1)
+
+    input_ids = input_ids.to(device)
+
+    # Generate response
+    # use_cache=False to avoid memory issues with long contexts
+    with torch.no_grad():
+        outputs = model.generate(
+            input_ids,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature if temperature > 0 else None,
+            do_sample=temperature > 0,
+            pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
+            use_cache=False,
+        )
+
+    # Decode only the new tokens
+    response = tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
+    return response
 
 
 def extract_passkey(response):
@@ -122,24 +100,31 @@ def extract_passkey(response):
 
 def run_passkey_test(args):
     """Run passkey retrieval test."""
-    model = args.model
-    n_values = args.n_values
+    model_name = args.model
+    token_lengths = args.token_lengths
     num_tests = args.num_tests
 
-    # Setup tokenizer
-    if "gpt" in model or "o1" in model:
-        tokenizer = tiktoken.encoding_for_model("gpt-4o-2024-08-06")
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_map[model], trust_remote_code=True
-        )
+    # Setup device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Setup OpenAI client for vLLM
-    client = OpenAI(base_url=URL, api_key=API_KEY)
+    # Load model and tokenizer
+    model_path = model_map.get(model_name, model_name)
+    print(f"Loading model from: {model_path}")
+    print(f"Device: {device}")
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, trust_remote_code=True
+    )
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        device_map="auto" if torch.cuda.is_available() else None,
+    )
+    model.eval()
 
     # Prepare output directory and file
     os.makedirs(args.save_dir, exist_ok=True)
-    out_file = os.path.join(args.save_dir, f"{model.split('/')[-1]}.jsonl")
+    out_file = os.path.join(args.save_dir, f"{model_name.replace('/', '_')}.jsonl")
 
     # Load existing results if any
     has_data = {}
@@ -147,14 +132,17 @@ def run_passkey_test(args):
         with open(out_file, encoding="utf-8") as f:
             for line in f:
                 item = json.loads(line)
-                key = f"{item['n_garbage']}_{item['test_id']}"
+                key = f"{item['target_tokens']}_{item['test_id']}"
                 has_data[key] = item
 
     results = []
     with open(out_file, "w", encoding="utf-8") as fout:
-        for n in tqdm(n_values, desc="Context lengths"):
-            for i in tqdm(range(num_tests), desc=f"Tests (n={n})", leave=False):
-                key = f"{n}_{i}"
+        for target_tokens in tqdm(token_lengths, desc="Token lengths"):
+            # Convert token length to character length
+            str_length = calc_str_length(target_tokens)
+
+            for i in tqdm(range(num_tests), desc=f"Tests (tokens={target_tokens})", leave=False):
+                key = f"{target_tokens}_{i}"
 
                 # Skip if already processed
                 if key in has_data:
@@ -165,17 +153,18 @@ def run_passkey_test(args):
                     continue
 
                 # Generate prompt and get expected passkey
-                prompt_text, expected_passkey = generate_prompt(n, seed=i)
+                prompt_text, expected_passkey = generate_prompt(str_length, seed=i)
 
-                # Get number of tokens
-                num_tokens = len(tokenizer.encode(prompt_text))
+                # Get actual number of tokens
+                actual_tokens = len(tokenizer.encode(prompt_text))
 
                 # Query the model
                 response = query_llm(
                     prompt_text,
+                    model_name,
                     model,
                     tokenizer,
-                    client,
+                    device,
                     temperature=0.0,
                     max_new_tokens=10,
                 )
@@ -189,8 +178,9 @@ def run_passkey_test(args):
                 # Store result
                 result = {
                     "test_id": i,
-                    "n_garbage": n,
-                    "num_tokens": num_tokens,
+                    "target_tokens": target_tokens,
+                    "actual_tokens": actual_tokens,
+                    "str_length": str_length,
                     "expected_passkey": expected_passkey,
                     "predicted_passkey": predicted_passkey,
                     "response": response,
@@ -206,7 +196,9 @@ def run_passkey_test(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Passkey Retrieval Test with vLLM")
+    parser = argparse.ArgumentParser(
+        description="Passkey Retrieval Test with Local Models"
+    )
     parser.add_argument(
         "--save_dir",
         "-s",
@@ -222,33 +214,19 @@ def main():
         help="Model name (key from model2path.json)",
     )
     parser.add_argument(
-        "--n_values",
-        "-n",
+        "--token_lengths",
+        "-t",
         type=int,
         nargs="+",
-        default=[
-            0,
-            100,
-            500,
-            1000,
-            5000,
-            8000,
-            10000,
-            12000,
-            14000,
-            18000,
-            20000,
-            25000,
-            38000,
-        ],
-        help="List of garbage text lengths to test",
+        default=[1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072],
+        help="List of target token lengths to test",
     )
     parser.add_argument(
         "--num_tests",
-        "-t",
+        "-n",
         type=int,
         default=50,
-        help="Number of tests per garbage length",
+        help="Number of tests per token length",
     )
     args = parser.parse_args()
 
@@ -257,9 +235,8 @@ def main():
     print("=" * 80)
     print(f"Model: {args.model}")
     print(f"Save Directory: {args.save_dir}")
-    print(f"Garbage Lengths: {args.n_values}")
+    print(f"Token Lengths: {args.token_lengths}")
     print(f"Tests per Length: {args.num_tests}")
-    print(f"vLLM URL: {URL}")
     print("=" * 80)
 
     # Run the test

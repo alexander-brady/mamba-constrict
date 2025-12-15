@@ -1,7 +1,15 @@
-#!/usr/bin/env bash
-# Master script to run all evaluation benchmarks
-# Usage: ./scripts/eval/run_all_evals.sh [gpu_memory_utilization] [tensor_parallel_size]
-# Example: CUDA_VISIBLE_DEVICES=0,1 TP=2 ./scripts/eval/run_all_evals.sh 0.95 2
+#!/bin/bash
+#SBATCH --job-name=eval_all
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --ntasks=1
+#SBATCH --tmp=64G
+#SBATCH --mem-per-cpu=64G
+#SBATCH --gpus-per-node=1
+#SBATCH --nodes=1
+#SBATCH --time=24:00:00
+#SBATCH --gres=gpumem:32G
+#SBATCH --mail-type=END,FAIL
 
 set -e
 

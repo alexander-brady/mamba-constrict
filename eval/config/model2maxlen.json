@@ -1,4 +1,4 @@
 {
     "_comment": "Potential Collision: Output filenames are generated using model_name.split('/')[-1]. Ensure unique suffixes to avoid overwriting results (e.g. org1/model and org2/model will collide).",
-    "Mamba130M": 140000
+    "Mamba130M": 139872
 }
