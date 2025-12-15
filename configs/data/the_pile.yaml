@@ -10,10 +10,3 @@ train:
 validation:
   split: train[2%:3%]
   save_dir: ${..data_dir}/validation/
-
-dataloader_kwargs:
-  num_workers: 4                     # tune with your CPU cores
-  batch_size: 512                    # tune with your GPU memory
-  persistent_workers: true           # keeps workers alive across iterations
-  prefetch_factor: 4                 # tune with your I/O
-  pin_memory: true                   # recommended for GPU training

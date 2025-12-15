@@ -4,6 +4,7 @@ defaults:
   - scheduler: cosine
   - data: the_pile
   - loss: default
+  - dataloader
   - trainer
   - _self_
 

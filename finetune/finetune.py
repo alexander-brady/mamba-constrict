@@ -35,8 +35,8 @@ def finetune(cfg: DictConfig):
     model.gradient_checkpointing_enable()
 
     # Load dataset
-    train_loader = load_dataloader(cfg.data, split="train")
-    val_loader = load_dataloader(cfg.data, split="validation")
+    train_loader = load_dataloader(cfg.dataloader, split="train", save_dir=cfg.data["train"].save_dir)
+    val_loader = load_dataloader(cfg.dataloader, split="validation", save_dir=cfg.data["validation"].save_dir)
 
     # Prepare callbacks
     callbacks = [
