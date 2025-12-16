@@ -15,6 +15,10 @@ from transformers import AutoTokenizer, PreTrainedTokenizer
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "eval" / "passkey_retrieval"))
 from passkey_utils import TASK_DESCRIPTION, GARBAGE_SENTENCE, FINAL_QUESTION, generate_passkey_info
 
+# Add babilong directory to path for prompts
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "eval" / "babilong"))
+from prompts import DEFAULT_PROMPTS, get_formatted_input
+
 logger = logging.getLogger(__name__)
 
 
@@ -151,6 +155,151 @@ def prepare_passkey_data(
     logger.info(f"Saved {len(ds)} passkey samples to {output_dir}")
 
 
+def prepare_babilong_data(
+    data_cfg: DictConfig,
+    tokenizer: PreTrainedTokenizer,
+    split: Literal["train", "validation", "test"],
+):
+    """Prepare babilong dataset for finetuning."""
+    dataset_name = data_cfg.dataset_name
+    task = data_cfg.task
+    length = data_cfg.length
+    block_size = data_cfg.block_size
+
+    # Prompt configuration
+    use_chat_template = data_cfg.get("use_chat_template", True)
+    use_instruction = data_cfg.get("use_instruction", True)
+    use_examples = data_cfg.get("use_examples", True)
+    use_post_prompt = data_cfg.get("use_post_prompt", True)
+
+    # Determine which tasks to process
+    if task == "all":
+        # Process all 10 tasks (qa1-qa10) separately
+        tasks_to_process = [f"qa{i}" for i in range(1, 11)]
+        logger.info(f"Preparing separate datasets for all 10 tasks: {tasks_to_process}")
+    else:
+        tasks_to_process = [task]
+
+    # Process each task separately and save to its own directory
+    for current_task in tasks_to_process:
+        processed_samples = []
+        logger.info(f"Loading babilong dataset for {split} split")
+        logger.info(f"Dataset: {dataset_name}, Task: {current_task}, Length: {length}")
+        logger.info(f"Target block size: {block_size} tokens")
+
+        # Load the babilong dataset from HuggingFace
+        # The dataset structure is: dataset[split_name][task_name]
+        # split_name is like "0k", "1k", "2k", etc.
+        try:
+            ds = datasets.load_dataset(dataset_name, length)
+            task_data = ds[current_task]
+        except Exception as e:
+            logger.error(f"Failed to load dataset {dataset_name} with length {length}, task {current_task}: {e}")
+            raise
+
+        logger.info(f"Loaded {len(task_data)} samples from {dataset_name}/{length}/{current_task}")
+
+        # Get prompt configuration for this task
+        prompt_cfg = DEFAULT_PROMPTS.get(current_task)
+        if prompt_cfg is None:
+            raise ValueError(f"Unknown task: {current_task}. Available tasks: {list(DEFAULT_PROMPTS.keys())}")
+
+        instruction = prompt_cfg["instruction"] if use_instruction else ""
+        examples = prompt_cfg["examples"] if use_examples else ""
+        post_prompt = prompt_cfg["post_prompt"] if use_post_prompt else ""
+
+        # Split data into train/validation
+        num_samples = data_cfg[split].num_samples
+
+        if split == "train":
+            indices = list(range(num_samples))
+        elif split == "validation":
+            train_samples = data_cfg.train.num_samples
+            indices = list(range(train_samples, train_samples + num_samples))
+        else:
+            indices = list(range(len(task_data)))
+
+        task_data = task_data.select(indices)
+        logger.info(f"Processing {len(task_data)} samples for {split} split (indices {indices[0]}-{indices[-1]})")
+
+        for idx, sample in enumerate(task_data):
+            context = sample["input"]
+            question = sample["question"]
+            target = sample["target"]
+
+            # Format the input using the same function as evaluation
+            input_text = get_formatted_input(
+                context=context,
+                question=question,
+                examples=examples,
+                instruction=instruction,
+                post_prompt=post_prompt,
+            )
+
+            # Apply chat template if requested
+            if use_chat_template:
+                # Match evaluation code: only user message, no system prompt in messages
+                messages = [{"role": "user", "content": input_text}]
+
+                # Tokenize with chat template
+                input_ids = tokenizer.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    tokenize=True,
+                )
+            else:
+                # Tokenize without chat template
+                input_ids = tokenizer.encode(input_text, add_special_tokens=True)
+
+            # Tokenize the target answer
+            target_ids = tokenizer.encode(f" {target}", add_special_tokens=False)
+
+            # Add EOS token
+            full_input_ids = input_ids + target_ids + [tokenizer.eos_token_id]
+
+            # Create labels: mask the prompt, only train on the answer
+            labels = [-100] * len(input_ids) + target_ids + [tokenizer.eos_token_id]
+
+            # Truncate or pad to block_size if needed
+            if len(full_input_ids) > block_size:
+                logger.warning(
+                    f"Task {current_task}, Sample {idx}: length {len(full_input_ids)} exceeds block_size {block_size}, truncating"
+                )
+                full_input_ids = full_input_ids[:block_size]
+                labels = labels[:block_size]
+            elif len(full_input_ids) < block_size:
+                # Pad with pad_token_id (or eos_token_id if pad_token doesn't exist)
+                pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
+                padding_length = block_size - len(full_input_ids)
+                full_input_ids = full_input_ids + [pad_id] * padding_length
+                labels = labels + [-100] * padding_length
+
+            processed_samples.append({
+                "input_ids": full_input_ids,
+                "labels": labels,
+                "target": target,
+                "task": current_task,
+            })
+
+        # Create dataset for this task
+        task_ds = datasets.Dataset.from_dict({
+            "input_ids": [s["input_ids"] for s in processed_samples],
+            "labels": [s["labels"] for s in processed_samples],
+            "target": [s["target"] for s in processed_samples],
+            "task": [s["task"] for s in processed_samples],
+        })
+
+        # Save to task-specific directory
+        save_dir = str(data_cfg[split].save_dir)
+        task_output_dir = Path(save_dir.replace("${..task}", current_task))
+        task_output_dir.mkdir(parents=True, exist_ok=True)
+
+        task_ds.save_to_disk(task_output_dir)
+        logger.info(f"Saved {len(task_ds)} samples for task {current_task} to {task_output_dir}")
+
+    logger.info(f"Finished preparing {len(tasks_to_process)} task(s) for {split} split")
+
+
 def prepare_data(
     data_cfg: DictConfig,
     tokenizer: PreTrainedTokenizer,
@@ -167,6 +316,11 @@ def prepare_data(
     # Check if this is a passkey dataset
     if data_cfg.get("use_passkey", False):
         prepare_passkey_data(data_cfg, tokenizer, split)
+        return
+
+    # Check if this is a babilong dataset
+    if data_cfg.get("use_babilong", False):
+        prepare_babilong_data(data_cfg, tokenizer, split)
         return
 
     # Load dataset

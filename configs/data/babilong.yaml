@@ -1,0 +1,28 @@
+name: babilong
+use_babilong: true  # Flag to indicate babilong dataset
+data_dir: ${oc.env:SCRATCH}/finetune/data/${.name}
+
+# Babilong-specific parameters
+dataset_name: RMT-team/babilong-1k-samples  # HuggingFace dataset
+block_size: 2048  # Target sequence length in tokens (1k context + prompt overhead)
+task: all  # Which babilong task to use (qa1-qa10 or "all" for all 10 tasks)
+length: 1k  # Which length split to use (0k, 1k, 2k, 4k, 8k, 16k, 32k)
+
+# Prompt configuration (matching eval/babilong/prompts.py)
+use_chat_template: true
+use_instruction: true
+use_examples: true
+use_post_prompt: true
+
+train:
+  split: train
+  num_samples: 90  # First 90 samples (indices 0-89) from each task
+  save_dir: ${..data_dir}/${..task}/train/  # e.g., $SCRATCH/finetune/data/babilong/qa1/train/
+
+validation:
+  split: validation
+  num_samples: 10  # Next 10 samples (indices 90-99) from each task
+  save_dir: ${..data_dir}/${..task}/validation/  # e.g., $SCRATCH/finetune/data/babilong/qa1/validation/
+
+# When task=all, creates 10 separate datasets: qa1/, qa2/, ..., qa10/
+# Each dataset has train/ (90 samples) and validation/ (10 samples) subdirectories
