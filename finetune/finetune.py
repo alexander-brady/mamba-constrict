@@ -75,3 +75,12 @@ def finetune(cfg: DictConfig):
 
     # Fine-tuning
     trainer.fit(fine_tuner, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
+    # Build save path: models/model_name-dataset-task (task only for babilong)
+    model_name = cfg.model.name.split("/")[-1]
+    dataset_name = cfg.data.name
+    save_name = f"{model_name}-{dataset_name}"
+    if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
+        save_name += f"-{cfg.data.task}"
+    fine_tuner.model.save_pretrained(f"{cfg.model_dir}/{save_name}")
+

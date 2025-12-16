@@ -2,20 +2,12 @@ import argparse
 import json
 import os
 import re
-import time
 
-import tiktoken
-import torch.multiprocessing as mp
+import torch
 from datasets import load_dataset
-from openai import OpenAI
 from tqdm import tqdm
-from transformers import AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-model_map = json.loads(open("../config/model2path.json", encoding="utf-8").read())
-maxlen_map = json.loads(open("../config/model2maxlen.json", encoding="utf-8").read())
-
-URL = os.getenv("VLLM_URL")
-API_KEY = os.getenv("VLLM_API_KEY")
 template_rag = open("prompts/0shot_rag.txt", encoding="utf-8").read()
 template_no_context = open("prompts/0shot_no_context.txt", encoding="utf-8").read()
 template_0shot = open("prompts/0shot.txt", encoding="utf-8").read()
@@ -27,48 +19,30 @@ def query_llm(
     prompt,
     model,
     tokenizer,
-    client=None,
     temperature=0.5,
     max_new_tokens=128,
-    stop=None,
 ):
-    # truncate
-    max_len = maxlen_map[model]
-    # Ensure we leave space for the generated tokens
-    max_input_len = max_len - max_new_tokens
-    
-    if model in model_map:
-        input_ids = tokenizer.encode(prompt)
-        if len(input_ids) > max_input_len:
-            input_ids = input_ids[: max_input_len // 2] + input_ids[-max_input_len // 2 :]
-            prompt = tokenizer.decode(input_ids, skip_special_tokens=True)
-    else:
-        input_ids = tokenizer.encode(prompt, disallowed_special=())
-        if len(input_ids) > max_input_len:
-            input_ids = input_ids[: max_input_len // 2] + input_ids[-max_input_len // 2 :]
-            prompt = tokenizer.decode(input_ids)
-    tries = 0
-    if model in model_map:
-        model = model_map[model]
-    while tries < 5:
-        tries += 1
-        try:
-            # Use completions API for base models (no chat template required)
-            completion = client.completions.create(
-                model=model,
-                prompt=prompt,
-                temperature=temperature,
-                max_tokens=max_new_tokens,
-            )
-            return completion.choices[0].text
-        except KeyboardInterrupt as e:
-            raise e
-        except Exception as e:
-            print(f'Error Occurs: "{str(e)}"        Retry ...')
-            time.sleep(1)
-    else:
-        print("Max tries. Failed.")
-        return ""
+    """Query the local model with the given prompt."""
+    # Tokenize prompt (no truncation for SSMs)
+    input_ids = tokenizer.encode(prompt, add_special_tokens=True)
+
+    # Generate
+    input_tensor = torch.tensor([input_ids]).to(model.device)
+
+    with torch.no_grad():
+        output_ids = model.generate(
+            input_tensor,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature if temperature > 0 else 1.0,
+            do_sample=temperature > 0,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+
+    # Decode only the generated part
+    generated_ids = output_ids[0][len(input_ids):]
+    response = tokenizer.decode(generated_ids, skip_special_tokens=True)
+
+    return response
 
 
 def extract_answer(response):
@@ -84,15 +58,8 @@ def extract_answer(response):
             return None
 
 
-def get_pred(data, args, fout):
-    model = args.model
-    if "gpt" in model or "o1" in model:
-        tokenizer = tiktoken.encoding_for_model("gpt-4o-2024-08-06")
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_map[model], trust_remote_code=True
-        )
-    client = OpenAI(base_url=URL, api_key=API_KEY)
+def get_pred(data, model, tokenizer, args, fout):
+    """Run prediction on data samples."""
     for item in tqdm(data):
         context = item["context"]
         if args.rag > 0:
@@ -121,11 +88,11 @@ def get_pred(data, args, fout):
         )
         if args.cot:
             output = query_llm(
-                prompt, model, tokenizer, client, temperature=0.1, max_new_tokens=1024
+                prompt, model, tokenizer, temperature=0.1, max_new_tokens=1024
             )
         else:
             output = query_llm(
-                prompt, model, tokenizer, client, temperature=0.1, max_new_tokens=128
+                prompt, model, tokenizer, temperature=0.1, max_new_tokens=128
             )
         if output == "":
             continue
@@ -142,7 +109,7 @@ def get_pred(data, args, fout):
                 .replace("$COT$", response)
             )
             output = query_llm(
-                prompt, model, tokenizer, client, temperature=0.1, max_new_tokens=128
+                prompt, model, tokenizer, temperature=0.1, max_new_tokens=128
             )
             if output == "":
                 continue
@@ -158,6 +125,8 @@ def get_pred(data, args, fout):
 def main():
     os.makedirs(args.save_dir, exist_ok=True)
     print(args)
+
+    # Determine output file
     if args.rag > 0:
         out_file = os.path.join(
             args.save_dir, args.model.split("/")[-1] + f"_rag_{str(args.rag)}.jsonl"
@@ -171,9 +140,22 @@ def main():
     else:
         out_file = os.path.join(args.save_dir, args.model.split("/")[-1] + ".jsonl")
 
-    dataset = load_dataset(
-        "THUDM/LongBench-v2", split="train"
-    )  # dataset = json.load(open('data.json', 'r', encoding='utf-8'))
+    # Load model and tokenizer
+    print(f"Loading model: {args.model}")
+    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+        trust_remote_code=True,
+        attn_implementation="flash_attention_2",
+    )
+    model.eval()
+    print(f"Model loaded on device: {model.device}")
+
+    # Load dataset
+    dataset = load_dataset("THUDM/LongBench-v2", split="train")
     data_all = [
         {
             "_id": item["_id"],
@@ -192,31 +174,24 @@ def main():
         for item in dataset
     ]
 
-    # cache
+    # Skip already processed samples
     has_data = {}
     if os.path.exists(out_file):
         with open(out_file, encoding="utf-8") as f:
             has_data = {json.loads(line)["_id"]: 0 for line in f}
-    fout = open(out_file, "a", encoding="utf-8")
-    data = []
-    for item in data_all:
-        if item["_id"] not in has_data:
-            data.append(item)
 
-    data_subsets = [data[i :: args.n_proc] for i in range(args.n_proc)]
-    processes = []
-    for rank in range(args.n_proc):
-        p = mp.Process(target=get_pred, args=(data_subsets[rank], args, fout))
-        p.start()
-        processes.append(p)
-    for p in processes:
-        p.join()
+    data = [item for item in data_all if item["_id"] not in has_data]
+
+    # Run prediction
+    fout = open(out_file, "a", encoding="utf-8")
+    get_pred(data, model, tokenizer, args, fout)
+    fout.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_dir", "-s", type=str, default="results")
-    parser.add_argument("--model", "-m", type=str, default="GLM-4-9B-Chat")
+    parser.add_argument("--model", "-m", type=str, required=True, help="Model path (HuggingFace or local)")
     parser.add_argument(
         "--cot", "-cot", action="store_true"
     )  # set to True if using COT
@@ -226,6 +201,5 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rag", "-rag", type=int, default=0
     )  # set to 0 if RAG is not used, otherwise set to N when using top-N retrieved context
-    parser.add_argument("--n_proc", "-n", type=int, default=16)
     args = parser.parse_args()
     main()

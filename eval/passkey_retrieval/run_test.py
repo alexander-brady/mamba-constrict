@@ -19,19 +19,12 @@ import argparse
 import json
 import os
 import re
-from pathlib import Path
 
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from passkey_utils import generate_prompt_random_depth
-
-# Load configuration files
-model_map = json.loads(open("../config/model2path.json", encoding="utf-8").read())
-maxlen_map = json.loads(
-    open("../config/model2maxlen.json", encoding="utf-8").read()
-)
 
 
 def calc_str_length(token_length, letters_per_token=3.65):
@@ -46,7 +39,6 @@ def generate_prompt(n_garbage, seed=None):
 
 def query_llm(
     prompt,
-    model_name,
     model,
     tokenizer,
     device,
@@ -54,19 +46,8 @@ def query_llm(
     max_new_tokens=10,
 ):
     """Query the LLM using local model."""
-    max_len = maxlen_map.get(model_name, 128000)
-
-    # Tokenize and truncate if necessary
-    input_ids = tokenizer.encode(prompt, return_tensors="pt")
-    if input_ids.size(1) > max_len:
-        # Keep first and last half
-        half_len = max_len // 2
-        input_ids = torch.cat([
-            input_ids[:, :half_len],
-            input_ids[:, -half_len:]
-        ], dim=1)
-
-    input_ids = input_ids.to(device)
+    # Tokenize prompt (no truncation for SSMs)
+    input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
 
     # Generate response
     # use_cache=False to avoid memory issues with long contexts
@@ -108,15 +89,14 @@ def run_passkey_test(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load model and tokenizer
-    model_path = model_map.get(model_name, model_name)
-    print(f"Loading model from: {model_path}")
+    print(f"Loading model from: {model_name}")
     print(f"Device: {device}")
 
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path, trust_remote_code=True
+        model_name, trust_remote_code=True
     )
     model = AutoModelForCausalLM.from_pretrained(
-        model_path,
+        model_name,
         trust_remote_code=True,
         device_map="auto" if torch.cuda.is_available() else None,
     )
@@ -161,7 +141,6 @@ def run_passkey_test(args):
                 # Query the model
                 response = query_llm(
                     prompt_text,
-                    model_name,
                     model,
                     tokenizer,
                     device,
@@ -211,7 +190,7 @@ def main():
         "-m",
         type=str,
         required=True,
-        help="Model name (key from model2path.json)",
+        help="Model path (HuggingFace or local)",
     )
     parser.add_argument(
         "--token_lengths",

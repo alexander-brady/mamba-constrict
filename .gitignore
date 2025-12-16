@@ -17,3 +17,9 @@ outputs/
 
 # Logs
 logs/
+
+# Models (local copies and finetuned models)
+# Keep the directory structure and huggingface_models.txt but ignore model weights
+models/*
+!models/README.md
+!models/huggingface_models.txt

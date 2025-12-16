@@ -38,36 +38,28 @@ fi
 RESULTS_FOLDER="./results/pg19"
 mkdir -p "$RESULTS_FOLDER"
 
-# Get list of models from config
-MODEL_NAMES=$(python3 -c 'import json; print(" ".join([k for k in json.load(open("eval/config/model2path.json")).keys() if not k.startswith("_")]))')
+# Get list of models using model_utils
+MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
 
 # Context lengths to evaluate (powers of 2, up to 256k)
 CONTEXT_LENGTHS="2048 4096 8192 16384 32768 65536 131072 262144"
 
 for MODEL_NAME in $MODEL_NAMES; do
-    MODEL_PATH=$(python3 -c "import json; print(json.load(open('eval/config/model2path.json'))['$MODEL_NAME'])")
-    MAX_LEN=$(python3 -c "import json; print(json.load(open('eval/config/model2maxlen.json'))['$MODEL_NAME'])")
+    MODEL_PATH=$(python3 -c "import sys; sys.path.insert(0, 'eval'); from model_utils import get_all_models; print(get_all_models()['$MODEL_NAME'])")
 
     echo "================================================================"
     echo "Processing Model: $MODEL_NAME"
     echo "Model Path: $MODEL_PATH"
-    echo "Max Length: $MAX_LEN"
     echo "================================================================"
 
-    # Filter context lengths based on max model length
-    VALID_CONTEXT_LENGTHS=""
-    for CTX in $CONTEXT_LENGTHS; do
-        if [ "$CTX" -le "$MAX_LEN" ]; then
-            VALID_CONTEXT_LENGTHS="$VALID_CONTEXT_LENGTHS $CTX"
-        fi
-    done
-
-    echo "Valid context lengths for this model: $VALID_CONTEXT_LENGTHS"
+    # For SSMs, no need to filter context lengths (no hard limit)
+    VALID_CONTEXT_LENGTHS="$CONTEXT_LENGTHS"
+    echo "Context lengths: $VALID_CONTEXT_LENGTHS"
 
     # Run perplexity evaluation
     pushd eval/pg19 > /dev/null
     python run_perplexity.py \
-        --model "$MODEL_NAME" \
+        --model "$MODEL_PATH" \
         --data_dir "$DATA_DIR" \
         --save_dir "../../$RESULTS_FOLDER" \
         --context_lengths $VALID_CONTEXT_LENGTHS \

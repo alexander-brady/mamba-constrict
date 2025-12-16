@@ -8,15 +8,10 @@ Loads raw text files and processes each document individually.
 import argparse
 import json
 import os
-import sys
-from pathlib import Path
 
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
-# Load model configurations
-model_map = json.loads(open("../config/model2path.json", encoding="utf-8").read())
 
 
 def calculate_perplexity_on_document(
@@ -114,7 +109,7 @@ def calculate_perplexity(model, tokenizer, documents, context_length, device, st
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate perplexity on PG19")
-    parser.add_argument("--model", "-m", required=True, help="Model name from config")
+    parser.add_argument("--model", "-m", required=True, help="Model path (HuggingFace or local)")
     parser.add_argument(
         "--data_dir", "-d", required=True, help="Path to raw PG19 test data (folder with .txt files)"
     )
@@ -132,17 +127,16 @@ def main():
 
     # Setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = model_map.get(args.model, args.model)
 
-    print(f"Model: {model_path}")
+    print(f"Model: {args.model}")
     print(f"Device: {device}")
     print(f"Context lengths: {args.context_lengths}")
     print(f"Stride: {args.stride}")
 
     # Load model
-    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
-        model_path,
+        args.model,
         trust_remote_code=True,
         device_map="auto" if torch.cuda.is_available() else None,
     )

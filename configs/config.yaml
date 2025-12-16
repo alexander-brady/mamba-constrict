@@ -11,6 +11,8 @@ defaults:
 seed: 42
 checkpoint_every_n_epochs: 10
 
+model_dir: models
+
 wandb:
   project: finetune-mamba
   entity: mamba-monks

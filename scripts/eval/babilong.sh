@@ -22,11 +22,11 @@ fi
 RESULTS_FOLDER="./results/babilong"
 mkdir -p "$RESULTS_FOLDER"
 
-# Get list of models from config
-MODEL_NAMES=$(python3 -c 'import json; print(" ".join([k for k in json.load(open("eval/config/model2path.json")).keys() if not k.startswith("_")]))')
+# Get list of models using model_utils
+MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
 
 for MODEL_NAME in $MODEL_NAMES; do
-    MODEL_PATH=$(python3 -c "import json; print(json.load(open('eval/config/model2path.json'))['$MODEL_NAME'])")
+    MODEL_PATH=$(python3 -c "import sys; sys.path.insert(0, 'eval'); from model_utils import get_all_models; print(get_all_models()['$MODEL_NAME'])")
 
     echo "================================================================"
     echo "Processing Model: $MODEL_NAME"
