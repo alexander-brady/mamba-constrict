@@ -1,4 +1,5 @@
 import argparse
+import logging
 import json
 import os
 import re
@@ -7,6 +8,8 @@ import torch
 from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+logger = logging.getLogger(__name__)
 
 template_rag = open("prompts/0shot_rag.txt", encoding="utf-8").read()
 template_no_context = open("prompts/0shot_no_context.txt", encoding="utf-8").read()
@@ -58,9 +61,12 @@ def extract_answer(response):
             return None
 
 
-def get_pred(data, model, tokenizer, args, fout):
+def get_pred(data, model, tokenizer, args, fout, model_name):
     """Run prediction on data samples."""
-    for item in tqdm(data):
+    correct_count = 0
+    total_processed = 0
+
+    for item in tqdm(data, desc=f"[{model_name}] Processing"):
         context = item["context"]
         if args.rag > 0:
             template = template_rag
@@ -121,10 +127,40 @@ def get_pred(data, model, tokenizer, args, fout):
         fout.write(json.dumps(item, ensure_ascii=False) + "\n")
         fout.flush()
 
+        total_processed += 1
+        if item["judge"]:
+            correct_count += 1
+
+        # Log progress every 10 samples
+        if total_processed % 10 == 0:
+            accuracy = (correct_count / total_processed) * 100
+            logger.info(
+                f"[{model_name}] Progress: {total_processed}/{len(data)} | "
+                f"Accuracy: {accuracy:.2f}%"
+            )
+
+    # Final summary
+    if total_processed > 0:
+        final_accuracy = (correct_count / total_processed) * 100
+        logger.info(
+            f"[{model_name}] Final: {total_processed} samples | "
+            f"Accuracy: {final_accuracy:.2f}% ({correct_count}/{total_processed})"
+        )
+
 
 def main():
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
     os.makedirs(args.save_dir, exist_ok=True)
-    print(args)
+    model_name = args.model.split("/")[-1]
+    logger.info("=" * 60)
+    logger.info(f"LongBench-v2 Evaluation - Model: {model_name}")
+    logger.info("=" * 60)
 
     # Determine output file
     if args.rag > 0:
@@ -141,7 +177,7 @@ def main():
         out_file = os.path.join(args.save_dir, args.model.split("/")[-1] + ".jsonl")
 
     # Load model and tokenizer
-    print(f"Loading model: {args.model}")
+    logger.info(f"[{model_name}] Loading model...")
     tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
 
     model = AutoModelForCausalLM.from_pretrained(
@@ -151,9 +187,10 @@ def main():
         trust_remote_code=True,
     )
     model.eval()
-    print(f"Model loaded on device: {model.device}")
+    logger.info(f"[{model_name}] Model loaded on device: {model.device}")
 
     # Load dataset
+    logger.info(f"[{model_name}] Loading dataset...")
     dataset = load_dataset("THUDM/LongBench-v2", split="train")
     data_all = [
         {
@@ -178,13 +215,18 @@ def main():
     if os.path.exists(out_file):
         with open(out_file, encoding="utf-8") as f:
             has_data = {json.loads(line)["_id"]: 0 for line in f}
+        logger.info(f"[{model_name}] Resuming: {len(has_data)} already processed")
 
     data = [item for item in data_all if item["_id"] not in has_data]
+    logger.info(f"[{model_name}] Processing {len(data)}/{len(data_all)} samples")
 
     # Run prediction
     fout = open(out_file, "a", encoding="utf-8")
-    get_pred(data, model, tokenizer, args, fout)
+    get_pred(data, model, tokenizer, args, fout, model_name)
     fout.close()
+    logger.info("=" * 60)
+    logger.info(f"LongBench-v2 Completed - Model: {model_name}")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
