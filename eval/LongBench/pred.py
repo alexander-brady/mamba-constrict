@@ -149,7 +149,6 @@ def main():
         torch_dtype=torch.bfloat16,
         device_map="auto",
         trust_remote_code=True,
-        attn_implementation="flash_attention_2",
     )
     model.eval()
     print(f"Model loaded on device: {model.device}")
