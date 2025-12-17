@@ -9,16 +9,13 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --environment=/users/teilers/saliency-alignment.toml
+#SBATCH --environment=/users/teilers/finetune.toml
 #SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
 echo "Starting LongBench evaluation at $(date)"
 
 cd /iopsstor/scratch/cscs/teilers/finetune/
-
-pip uninstall -y torchao
-pip install accelerate
 
 # Get list of models using model_utils
 MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
