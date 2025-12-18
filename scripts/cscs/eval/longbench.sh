@@ -15,6 +15,10 @@
 
 echo "Starting LongBench evaluation at $(date)"
 
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+
 cd /iopsstor/scratch/cscs/teilers/finetune/
 
 # Get list of models using model_utils

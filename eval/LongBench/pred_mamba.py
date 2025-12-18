@@ -1,4 +1,5 @@
 import argparse
+import gc
 import logging
 import json
 import os
@@ -8,6 +9,8 @@ import torch
 from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
 
 logger = logging.getLogger(__name__)
 
@@ -27,23 +30,32 @@ def query_llm(
 ):
     """Query the local model with the given prompt."""
     # Tokenize prompt (no truncation for SSMs)
-    input_ids = tokenizer.encode(prompt, add_special_tokens=True)
+    tokens = tokenizer(prompt, return_tensors="pt")
+    input_ids = tokens.input_ids.to(device="cuda")
 
-    # Generate
-    input_tensor = torch.tensor([input_ids]).to(model.device)
+    max_length = input_ids.shape[1] + max_new_tokens
 
     with torch.inference_mode():
         output_ids = model.generate(
-            input_tensor,
-            max_new_tokens=max_new_tokens,
+            input_ids=input_ids,
+            max_length=max_length,
+            cg=True,
             temperature=temperature if temperature > 0 else 1.0,
-            do_sample=temperature > 0,
-            pad_token_id=tokenizer.eos_token_id,
+            # do_sample=temperature > 0,
+            # pad_token_id=tokenizer.eos_token_id,
+            # use_cache=True,
         )
 
     # Decode only the generated part
-    generated_ids = output_ids[0][len(input_ids):]
+    generated_ids = output_ids[0][input_ids.shape[1]:]
     response = tokenizer.decode(generated_ids, skip_special_tokens=True)
+
+    # Clean up tensors to free memory
+    del input_ids, output_ids, generated_ids
+
+    # Clear CUDA cache and run garbage collection to free up memory
+    torch.cuda.empty_cache()
+    gc.collect()
 
     return response
 
@@ -178,16 +190,15 @@ def main():
 
     # Load model and tokenizer
     logger.info(f"[{model_name}] Loading model...")
-    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
 
-    model = AutoModelForCausalLM.from_pretrained(
+    model = MambaLMHeadModel.from_pretrained(
         args.model,
         dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
+        device="cuda",
     )
     model.eval()
-    logger.info(f"[{model_name}] Model loaded on device: {model.device}")
+    logger.info(f"[{model_name}] Model {model.__class__.__name__} loaded.")
 
     # Load dataset
     logger.info(f"[{model_name}] Loading dataset...")
