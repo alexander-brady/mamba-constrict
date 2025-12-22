@@ -9,7 +9,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --environment=/users/teilers/finetune.toml
+#SBATCH --environment=/slurm/finetune.toml
 #SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
