@@ -1,4 +1,4 @@
-image = "$SCRATCH/slurm/finetune.sqsh"
+image = "/users/<YOUR_USERNAME>/scratch/finetune/slurm/finetune.sqsh"
 mounts = [
     "/capstor",
     "/iopsstor",
