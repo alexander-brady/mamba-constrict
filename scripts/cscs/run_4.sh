@@ -17,6 +17,6 @@ echo "Beginning finetuning at $(date)"
 
 export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
 
-uv run -m finetune
+python -m finetune
 
 echo "Finished finetuning at $(date)"
