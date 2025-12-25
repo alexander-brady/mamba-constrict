@@ -24,6 +24,9 @@ models/*
 !models/README.md
 !models/huggingface_models.txt
 
+# Data folders
+data/*
+
 # Docker Image files
 *.sqsh
 *.squashfs

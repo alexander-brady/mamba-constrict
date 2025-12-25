@@ -14,11 +14,12 @@
 
 echo "Beginning downloading data at $(date)"
 
-dir="$SCRATCH/finetune/data/pg19"
+dir="$STORE/finetune/data/pg19"
+export HF_HOME="$dir/.hf/"
 
 # Check if gsutil is installed
 if ! command -v gsutil &> /dev/null; then
-    uv pip install gsutil
+    pip install gsutil
 fi
 
 # Create data directory if it doesn't exist
@@ -39,6 +40,6 @@ fi
 
 popd
 
-python -m finetune.cli.prepare_data
+python -m finetune.cli.prepare_data data.data_dir=${STORE}/finetune/data/pg19
 
 echo "Finished downloading data at $(date)"

@@ -16,7 +16,8 @@
 echo "Beginning finetuning at $(date)"
 
 export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
+export HF_HOME="$STORE/finetune/.hf/"
 
-python -m finetune
+python -m finetune data.data_dir=${STORE}/finetune/data/${.name}
 
 echo "Finished finetuning at $(date)"
