@@ -1,0 +1,5 @@
+_target_: finetune.criterion.TemporalDrift
+weight: 0.1
+reduce: mean  # or sum
+order: 1
+
