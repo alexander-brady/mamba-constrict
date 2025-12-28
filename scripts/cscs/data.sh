@@ -14,7 +14,10 @@
 
 echo "Beginning downloading data at $(date)"
 
-dir="$STORE/finetune/data/pg19"
+# TODO: Find out where to store it - apparently Capstore ($STORE) is shared with large-sc-2, so 
+# not ideal.
+dir="$SCRATCH/finetune"
+pg19_dir="$dir/data/pg19"
 export HF_HOME="$dir/.hf/"
 
 # Check if gsutil is installed
@@ -23,11 +26,11 @@ if ! command -v gsutil &> /dev/null; then
 fi
 
 # Create data directory if it doesn't exist
-mkdir -p "$dir"
-pushd "$dir"
+mkdir -p "$pg19_dir"
+pushd "$pg19_dir"
 
 if [ -d "test" ] && [ -d "train" ] && [ -d "validation" ]; then
-    echo "Data already exists in $dir, skipping download."
+    echo "Data already exists in $pg19_dir, skipping download."
 else
     # Download the datasets using gsutil
     echo "Downloading datasets from gs://deepmind-gutenberg/..."
@@ -35,11 +38,12 @@ else
       "gs://deepmind-gutenberg/test" \
       "gs://deepmind-gutenberg/train" \
       "gs://deepmind-gutenberg/validation" \
-      .
+      $pg19_dir/
+      echo "DeepMind Gutenberg dataset downloaded to $pg19_dir."
 fi
 
 popd
 
-python -m finetune.cli.prepare_data data.data_dir=${STORE}/finetune/data/pg19
+python -m finetune.cli.prepare_data data.data_dir=$dir/data
 
 echo "Finished downloading data at $(date)"

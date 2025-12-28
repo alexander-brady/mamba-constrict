@@ -361,7 +361,10 @@ def prepare_data(
     else:
         # Load from HuggingFace Hub
         ds = datasets.load_dataset(
-            data_cfg.name, split=data_cfg[split].split, trust_remote_code=True
+            data_cfg.name, 
+            split=data_cfg[split].split, 
+            trust_remote_code=True,
+            num_proc=8,
         )
         assert isinstance(ds, datasets.Dataset)  # for type checker
         logger.info(f"Loaded {split} split with {len(ds)} samples from HuggingFace.")
