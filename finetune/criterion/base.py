@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Literal
 
 import torch
 
@@ -14,9 +15,17 @@ class Criterion(ABC):
             Abstract method to compute the auxiliary loss. Must be implemented by subclasses.
     """
 
-    def __init__(self, weight: float = 1.0) -> None:
+    def __init__(
+        self,
+        weight: float = 1.0,
+        reduction: Literal["mean", "sum"] = "mean",
+    ) -> None:
         super().__init__()
         self.weight = weight
+        self.reduction = {
+            "mean": torch.mean,
+            "sum": torch.sum,
+        }[reduction]
 
     def __call__(self, last_hidden_state: torch.Tensor) -> float:
         return self.weight * self.compute_loss(last_hidden_state)

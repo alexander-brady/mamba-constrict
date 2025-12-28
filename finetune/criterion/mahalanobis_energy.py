@@ -1,3 +1,5 @@
+from typing import Literal
+
 import torch
 
 from .base import Criterion
@@ -13,22 +15,17 @@ class MahalanobisEnergy(Criterion):
     def __init__(
         self,
         weight: float = 1.0,
-        reduce: str = "mean",
+        reduction: Literal["mean", "sum"] = "mean",
         alpha: float = 0.99,
         eps: float = 1e-6,
     ) -> None:
-        super().__init__(weight=weight)
-        if reduce not in {"mean", "sum"}:
-            msg = 'reduce must be either "mean" or "sum"'
-            raise ValueError(msg)
+        super().__init__(weight=weight, reduction=reduction)
         if not 0 < alpha <= 1:
-            msg = "alpha must be in (0, 1]"
-            raise ValueError(msg)
-        if eps <= 0:
-            msg = "eps must be positive"
-            raise ValueError(msg)
+            raise ValueError("Alpha must be in (0, 1]")
 
-        self.reduce = reduce
+        if eps <= 0:
+            raise ValueError("eps must be positive")
+
         self.alpha = alpha
         self.eps = eps
 
@@ -46,16 +43,15 @@ class MahalanobisEnergy(Criterion):
     def _update_buffers(
         self, batch_mean: torch.Tensor, batch_var: torch.Tensor
     ) -> None:
+        assert self._mean is not None and self._var is not None  # for type checker
         self._mean = self.alpha * self._mean + (1 - self.alpha) * batch_mean
         self._var = self.alpha * self._var + (1 - self.alpha) * batch_var
 
     def compute_loss(self, last_hidden_state: torch.Tensor) -> torch.Tensor:
-        if last_hidden_state is None:
-            return torch.tensor(0.0, device="cpu")
-
         hs = last_hidden_state.float()  # (B, S, D)
         if not self._initialized:
             self._initialize_buffers(hs)
+        assert self._mean is not None and self._var is not None  # for type checker
 
         # Batch stats over batch and sequence
         batch_mean = hs.mean(dim=(0, 1))  # (D,)
@@ -67,6 +63,4 @@ class MahalanobisEnergy(Criterion):
         var = self._var.view(1, 1, -1)
         mahalanobis = (hs - mean).pow(2) / (var + self.eps)
 
-        if self.reduce == "mean":
-            return mahalanobis.mean()
-        return mahalanobis.sum()
+        return self.reduction(mahalanobis)

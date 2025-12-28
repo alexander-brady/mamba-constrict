@@ -1,4 +1,4 @@
-_target_: finetune.criterion.L2HiddenStateNorm
+_target_: finetune.criterion.L2Norm
 weight: 0.1
 reduce: mean  # or sum
 
