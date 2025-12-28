@@ -14,8 +14,6 @@
 
 echo "Beginning downloading data at $(date)"
 
-# TODO: Find out where to store it - apparently Capstore ($STORE) is shared with large-sc-2, so 
-# not ideal.
 dir="$SCRATCH/finetune"
 pg19_dir="$dir/data/pg19"
 export HF_HOME="$dir/.hf/"
