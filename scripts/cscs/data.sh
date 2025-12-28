@@ -42,6 +42,8 @@ fi
 
 popd
 
-python -m finetune.cli.prepare_data data.data_dir=$dir/data
+python -m finetune.cli.prepare_data \
+    data.data_dir=$dir/data \
+    hydra.run.dir="$dir/outputs/data_$SLURM_JOB_ID"
 
 echo "Finished downloading data at $(date)"

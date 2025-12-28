@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=large-sc-2
-#SBATCH --job-name=finetune_4_mamba
+#SBATCH --job-name=finetune
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --ntasks=1
@@ -15,9 +15,11 @@
 
 echo "Beginning finetuning at $(date)"
 
-export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
-export HF_HOME="$STORE/finetune/.hf/"
+dir="$SCRATCH/finetune"
+export HF_HOME="$dir/.hf/" 
 
-python -m finetune data.data_dir=${STORE}/finetune/data/${.name}
+export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
+
+python -m finetune hydra.run.dir="$dir/outputs/finetune_$SLURM_JOB_ID"
 
 echo "Finished finetuning at $(date)"
