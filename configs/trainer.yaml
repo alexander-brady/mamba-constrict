@@ -13,4 +13,4 @@ max_steps: 100
 
 val_check_interval: 100 # Validate every 100 training steps
 limit_val_batches: 0.01  # Use 1% of validation set
-check_val_every_n_epochs: None
+check_val_every_n_epoch: None
