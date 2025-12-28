@@ -1,6 +1,6 @@
 import argparse
-import logging
 import json
+import logging
 import os
 import re
 
@@ -42,7 +42,7 @@ def query_llm(
         )
 
     # Decode only the generated part
-    generated_ids = output_ids[0][len(input_ids):]
+    generated_ids = output_ids[0][len(input_ids) :]
     response = tokenizer.decode(generated_ids, skip_special_tokens=True)
 
     return response
@@ -152,8 +152,8 @@ def main():
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     os.makedirs(args.save_dir, exist_ok=True)
@@ -232,7 +232,13 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_dir", "-s", type=str, default="results")
-    parser.add_argument("--model", "-m", type=str, required=True, help="Model path (HuggingFace or local)")
+    parser.add_argument(
+        "--model",
+        "-m",
+        type=str,
+        required=True,
+        help="Model path (HuggingFace or local)",
+    )
     parser.add_argument(
         "--cot", "-cot", action="store_true"
     )  # set to True if using COT

@@ -7,9 +7,7 @@ This module provides functions to:
 3. Generate model lists for evaluation scripts
 """
 
-import os
 from pathlib import Path
-from typing import Dict, List
 
 
 def get_repo_root() -> Path:
@@ -23,7 +21,7 @@ def get_models_dir() -> Path:
     return get_repo_root() / "models"
 
 
-def get_huggingface_models() -> List[str]:
+def get_huggingface_models() -> list[str]:
     """
     Load HuggingFace model paths from models/huggingface_models.txt.
 
@@ -36,17 +34,17 @@ def get_huggingface_models() -> List[str]:
         return []
 
     models = []
-    with open(hf_file, 'r') as f:
+    with open(hf_file) as f:
         for line in f:
             line = line.strip()
             # Skip empty lines and comments
-            if line and not line.startswith('#'):
+            if line and not line.startswith("#"):
                 models.append(line)
 
     return models
 
 
-def get_local_models() -> List[Path]:
+def get_local_models() -> list[Path]:
     """
     Discover local finetuned models in the models/ directory.
 
@@ -70,15 +68,15 @@ def get_local_models() -> List[Path]:
             continue
 
         # Skip hidden directories
-        if item.name.startswith('.'):
+        if item.name.startswith("."):
             continue
 
         # Check if it looks like a model directory
         has_config = (item / "config.json").exists()
         has_weights = (
-            (item / "pytorch_model.bin").exists() or
-            (item / "model.safetensors").exists() or
-            any(item.glob("*.safetensors"))
+            (item / "pytorch_model.bin").exists()
+            or (item / "model.safetensors").exists()
+            or any(item.glob("*.safetensors"))
         )
 
         if has_config or has_weights:
@@ -87,7 +85,7 @@ def get_local_models() -> List[Path]:
     return sorted(local_models)
 
 
-def get_all_models() -> Dict[str, str]:
+def get_all_models() -> dict[str, str]:
     """
     Get all models (both local and HuggingFace).
 
@@ -101,7 +99,7 @@ def get_all_models() -> Dict[str, str]:
     # Add HuggingFace models
     for hf_path in get_huggingface_models():
         # Use the model name (last part) as key
-        model_name = hf_path.split('/')[-1]
+        model_name = hf_path.split("/")[-1]
         models[model_name] = hf_path
 
     # Add local models
@@ -119,7 +117,9 @@ def list_models() -> None:
 
     if not models:
         print("No models found.")
-        print(f"Add HuggingFace models to: {get_models_dir() / 'huggingface_models.txt'}")
+        print(
+            f"Add HuggingFace models to: {get_models_dir() / 'huggingface_models.txt'}"
+        )
         print(f"Place local models in: {get_models_dir()}/")
         return
 
@@ -132,7 +132,7 @@ def list_models() -> None:
     if hf_models:
         print("HuggingFace Models:")
         for hf_path in hf_models:
-            model_name = hf_path.split('/')[-1]
+            model_name = hf_path.split("/")[-1]
             print(f"  {model_name:30} -> {hf_path}")
         print()
 

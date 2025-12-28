@@ -13,7 +13,9 @@ def collate_fn(batch):
     }
 
 
-def load_dataloader(data_cfg: DictConfig, split: Literal["train", "validation"], save_dir: str):
+def load_dataloader(
+    data_cfg: DictConfig, split: Literal["train", "validation"], save_dir: str
+):
     """
     Load a PyTorch DataLoader for a specific data split.
 

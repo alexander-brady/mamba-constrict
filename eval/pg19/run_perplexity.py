@@ -8,6 +8,7 @@ Loads raw text files and processes each document individually.
 import argparse
 import json
 import os
+from pathlib import Path
 
 import torch
 from tqdm import tqdm
@@ -74,7 +75,9 @@ def calculate_perplexity_on_document(
     return nll_sum, n_tokens
 
 
-def calculate_perplexity(model, tokenizer, documents, context_length, device, stride=512):
+def calculate_perplexity(
+    model, tokenizer, documents, context_length, device, stride=512
+):
     """
     Calculate perplexity across all documents using sliding window approach.
 
@@ -88,7 +91,7 @@ def calculate_perplexity(model, tokenizer, documents, context_length, device, st
     total_nll_sum = 0.0
     total_n_tokens = 0
 
-    for doc_idx, text in enumerate(tqdm(documents, desc=f"Context {context_length}")):
+    for text in tqdm(documents, desc=f"Context {context_length}"):
         nll_sum, n_tokens = calculate_perplexity_on_document(
             model, tokenizer, text, context_length, device, stride
         )
@@ -109,9 +112,14 @@ def calculate_perplexity(model, tokenizer, documents, context_length, device, st
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate perplexity on PG19")
-    parser.add_argument("--model", "-m", required=True, help="Model path (HuggingFace or local)")
     parser.add_argument(
-        "--data_dir", "-d", required=True, help="Path to raw PG19 test data (folder with .txt files)"
+        "--model", "-m", required=True, help="Model path (HuggingFace or local)"
+    )
+    parser.add_argument(
+        "--data_dir",
+        "-d",
+        required=True,
+        help="Path to raw PG19 test data (folder with .txt files)",
     )
     parser.add_argument("--save_dir", "-s", default="results", help="Results directory")
     parser.add_argument(
@@ -122,7 +130,12 @@ def main():
         default=[2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144],
     )
     parser.add_argument("--stride", type=int, default=512, help="Sliding window stride")
-    parser.add_argument("--max_documents", type=int, default=None, help="Limit number of documents to process")
+    parser.add_argument(
+        "--max_documents",
+        type=int,
+        default=None,
+        help="Limit number of documents to process",
+    )
     args = parser.parse_args()
 
     # Setup
@@ -155,8 +168,8 @@ def main():
 
     # Load documents
     documents = []
-    for txt_file in tqdm(text_files[:args.max_documents], desc="Loading documents"):
-        with open(txt_file, "r", encoding="utf-8") as f:
+    for txt_file in tqdm(text_files[: args.max_documents], desc="Loading documents"):
+        with open(txt_file, encoding="utf-8") as f:
             text = f.read()
             if text.strip():  # Skip empty files
                 documents.append(text)

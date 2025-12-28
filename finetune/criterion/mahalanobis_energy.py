@@ -43,7 +43,9 @@ class MahalanobisEnergy(Criterion):
         self._var = torch.ones(hidden_dim, device=device)
         self._initialized = True
 
-    def _update_buffers(self, batch_mean: torch.Tensor, batch_var: torch.Tensor) -> None:
+    def _update_buffers(
+        self, batch_mean: torch.Tensor, batch_var: torch.Tensor
+    ) -> None:
         self._mean = self.alpha * self._mean + (1 - self.alpha) * batch_mean
         self._var = self.alpha * self._var + (1 - self.alpha) * batch_var
 
@@ -68,4 +70,3 @@ class MahalanobisEnergy(Criterion):
         if self.reduce == "mean":
             return mahalanobis.mean()
         return mahalanobis.sum()
-

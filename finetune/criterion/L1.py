@@ -21,4 +21,3 @@ class L1HiddenStateNorm(Criterion):
         if self.reduce == "mean":
             return l1.mean()
         return l1.sum()
-

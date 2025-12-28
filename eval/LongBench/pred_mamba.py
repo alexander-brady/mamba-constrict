@@ -1,16 +1,15 @@
 import argparse
 import gc
-import logging
 import json
+import logging
 import os
 import re
 
 import torch
 from datasets import load_dataset
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
 from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
+from tqdm import tqdm
+from transformers import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ def query_llm(
         )
 
     # Decode only the generated part
-    generated_ids = output_ids[0][input_ids.shape[1]:]
+    generated_ids = output_ids[0][input_ids.shape[1] :]
     response = tokenizer.decode(generated_ids, skip_special_tokens=True)
 
     # Clean up tensors to free memory
@@ -164,8 +163,8 @@ def main():
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     os.makedirs(args.save_dir, exist_ok=True)
@@ -243,7 +242,13 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_dir", "-s", type=str, default="results")
-    parser.add_argument("--model", "-m", type=str, required=True, help="Model path (HuggingFace or local)")
+    parser.add_argument(
+        "--model",
+        "-m",
+        type=str,
+        required=True,
+        help="Model path (HuggingFace or local)",
+    )
     parser.add_argument(
         "--cot", "-cot", action="store_true"
     )  # set to True if using COT

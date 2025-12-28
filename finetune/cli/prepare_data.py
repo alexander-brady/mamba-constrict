@@ -7,13 +7,19 @@ from typing import Literal
 
 import datasets
 import hydra
-import numpy as np
 from omegaconf import DictConfig
 from transformers import AutoTokenizer, PreTrainedTokenizer
 
 # Add eval directory to path to import passkey_utils
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "eval" / "passkey_retrieval"))
-from passkey_utils import TASK_DESCRIPTION, GARBAGE_SENTENCE, FINAL_QUESTION, generate_passkey_info
+sys.path.insert(
+    0, str(Path(__file__).parent.parent.parent / "eval" / "passkey_retrieval")
+)
+from passkey_utils import (
+    FINAL_QUESTION,
+    GARBAGE_SENTENCE,
+    TASK_DESCRIPTION,
+    generate_passkey_info,
+)
 
 # Add babilong directory to path for prompts
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "eval" / "babilong"))
@@ -22,7 +28,9 @@ from prompts import DEFAULT_PROMPTS, get_formatted_input
 logger = logging.getLogger(__name__)
 
 
-def generate_passkey_sample(tokenizer: PreTrainedTokenizer, target_length: int, depth: float, seed: int):
+def generate_passkey_sample(
+    tokenizer: PreTrainedTokenizer, target_length: int, depth: float, seed: int
+):
     """
     Generate a single passkey retrieval sample.
 
@@ -50,7 +58,9 @@ def generate_passkey_sample(tokenizer: PreTrainedTokenizer, target_length: int, 
     answer_tokens = tokenizer.encode(f" {passkey}", add_special_tokens=False)
 
     # Calculate how many garbage tokens we need
-    fixed_tokens = len(task_tokens) + len(info_tokens) + len(question_tokens) + len(answer_tokens)
+    fixed_tokens = (
+        len(task_tokens) + len(info_tokens) + len(question_tokens) + len(answer_tokens)
+    )
     garbage_tokens_needed = target_length - fixed_tokens - 1  # -1 for EOS
 
     if garbage_tokens_needed < 0:
@@ -66,7 +76,9 @@ def generate_passkey_sample(tokenizer: PreTrainedTokenizer, target_length: int, 
     garbage_suffix_tokens_needed = garbage_tokens_needed - passkey_position
 
     # Generate garbage tokens by repeating the garbage sentence
-    garbage_sentence_tokens = tokenizer.encode(GARBAGE_SENTENCE, add_special_tokens=False)
+    garbage_sentence_tokens = tokenizer.encode(
+        GARBAGE_SENTENCE, add_special_tokens=False
+    )
 
     def generate_garbage_tokens(n_tokens):
         if n_tokens == 0:
@@ -81,13 +93,13 @@ def generate_passkey_sample(tokenizer: PreTrainedTokenizer, target_length: int, 
 
     # Assemble the full sequence
     input_ids = (
-        task_tokens +
-        garbage_prefix +
-        info_tokens +
-        garbage_suffix +
-        question_tokens +
-        answer_tokens +
-        [tokenizer.eos_token_id]
+        task_tokens
+        + garbage_prefix
+        + info_tokens
+        + garbage_suffix
+        + question_tokens
+        + answer_tokens
+        + [tokenizer.eos_token_id]
     )
 
     # Create labels: mask everything except the answer tokens
@@ -95,7 +107,13 @@ def generate_passkey_sample(tokenizer: PreTrainedTokenizer, target_length: int, 
     labels = [-100] * len(input_ids)
 
     # Only keep the answer tokens (the passkey number)
-    answer_start = len(task_tokens) + len(garbage_prefix) + len(info_tokens) + len(garbage_suffix) + len(question_tokens)
+    answer_start = (
+        len(task_tokens)
+        + len(garbage_prefix)
+        + len(info_tokens)
+        + len(garbage_suffix)
+        + len(question_tokens)
+    )
     for i in range(len(answer_tokens)):
         labels[answer_start + i] = input_ids[answer_start + i]
 
@@ -140,12 +158,14 @@ def prepare_passkey_data(
         samples.append(sample)
 
     # Create dataset from samples
-    ds = datasets.Dataset.from_dict({
-        "input_ids": [s["input_ids"] for s in samples],
-        "labels": [s["labels"] for s in samples],
-        "passkey": [s["passkey"] for s in samples],
-        "depth": [s["depth"] for s in samples],
-    })
+    ds = datasets.Dataset.from_dict(
+        {
+            "input_ids": [s["input_ids"] for s in samples],
+            "labels": [s["labels"] for s in samples],
+            "passkey": [s["passkey"] for s in samples],
+            "depth": [s["depth"] for s in samples],
+        }
+    )
 
     # Save processed dataset
     output_dir = Path(data_cfg[split].save_dir)
@@ -194,15 +214,21 @@ def prepare_babilong_data(
             ds = datasets.load_dataset(dataset_name, length)
             task_data = ds[current_task]
         except Exception as e:
-            logger.error(f"Failed to load dataset {dataset_name} with length {length}, task {current_task}: {e}")
+            logger.error(
+                f"Failed to load dataset {dataset_name} with length {length}, task {current_task}: {e}"
+            )
             raise
 
-        logger.info(f"Loaded {len(task_data)} samples from {dataset_name}/{length}/{current_task}")
+        logger.info(
+            f"Loaded {len(task_data)} samples from {dataset_name}/{length}/{current_task}"
+        )
 
         # Get prompt configuration for this task
         prompt_cfg = DEFAULT_PROMPTS.get(current_task)
         if prompt_cfg is None:
-            raise ValueError(f"Unknown task: {current_task}. Available tasks: {list(DEFAULT_PROMPTS.keys())}")
+            raise ValueError(
+                f"Unknown task: {current_task}. Available tasks: {list(DEFAULT_PROMPTS.keys())}"
+            )
 
         instruction = prompt_cfg["instruction"] if use_instruction else ""
         examples = prompt_cfg["examples"] if use_examples else ""
@@ -220,7 +246,9 @@ def prepare_babilong_data(
             indices = list(range(len(task_data)))
 
         task_data = task_data.select(indices)
-        logger.info(f"Processing {len(task_data)} samples for {split} split (indices {indices[0]}-{indices[-1]})")
+        logger.info(
+            f"Processing {len(task_data)} samples for {split} split (indices {indices[0]}-{indices[-1]})"
+        )
 
         for idx, sample in enumerate(task_data):
             context = sample["input"]
@@ -269,25 +297,33 @@ def prepare_babilong_data(
                 labels = labels[:block_size]
             elif len(full_input_ids) < block_size:
                 # Pad with pad_token_id (or eos_token_id if pad_token doesn't exist)
-                pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
+                pad_id = (
+                    tokenizer.pad_token_id
+                    if tokenizer.pad_token_id is not None
+                    else tokenizer.eos_token_id
+                )
                 padding_length = block_size - len(full_input_ids)
                 full_input_ids = full_input_ids + [pad_id] * padding_length
                 labels = labels + [-100] * padding_length
 
-            processed_samples.append({
-                "input_ids": full_input_ids,
-                "labels": labels,
-                "target": target,
-                "task": current_task,
-            })
+            processed_samples.append(
+                {
+                    "input_ids": full_input_ids,
+                    "labels": labels,
+                    "target": target,
+                    "task": current_task,
+                }
+            )
 
         # Create dataset for this task
-        task_ds = datasets.Dataset.from_dict({
-            "input_ids": [s["input_ids"] for s in processed_samples],
-            "labels": [s["labels"] for s in processed_samples],
-            "target": [s["target"] for s in processed_samples],
-            "task": [s["task"] for s in processed_samples],
-        })
+        task_ds = datasets.Dataset.from_dict(
+            {
+                "input_ids": [s["input_ids"] for s in processed_samples],
+                "labels": [s["labels"] for s in processed_samples],
+                "target": [s["target"] for s in processed_samples],
+                "task": [s["task"] for s in processed_samples],
+            }
+        )
 
         # Save to task-specific directory
         save_dir = str(data_cfg[split].save_dir)
@@ -295,7 +331,9 @@ def prepare_babilong_data(
         task_output_dir.mkdir(parents=True, exist_ok=True)
 
         task_ds.save_to_disk(task_output_dir)
-        logger.info(f"Saved {len(task_ds)} samples for task {current_task} to {task_output_dir}")
+        logger.info(
+            f"Saved {len(task_ds)} samples for task {current_task} to {task_output_dir}"
+        )
 
     logger.info(f"Finished preparing {len(tasks_to_process)} task(s) for {split} split")
 
@@ -361,8 +399,8 @@ def prepare_data(
     else:
         # Load from HuggingFace Hub
         ds = datasets.load_dataset(
-            data_cfg.name, 
-            split=data_cfg[split].split, 
+            data_cfg.name,
+            split=data_cfg[split].split,
             trust_remote_code=True,
             num_proc=8,
         )
@@ -374,7 +412,9 @@ def prepare_data(
 
     if use_truncation:
         # Truncate/pad each sample to fixed block_size
-        logger.info(f"Using truncation mode: each sample will be exactly {block_size} tokens")
+        logger.info(
+            f"Using truncation mode: each sample will be exactly {block_size} tokens"
+        )
 
         def tokenize(batch):
             # Tokenize with truncation and padding to fixed length
@@ -399,7 +439,9 @@ def prepare_data(
         )
     else:
         # Pack multiple samples into fixed-size blocks (original behavior)
-        logger.info(f"Using packing mode: concatenating and chunking into {block_size} token blocks")
+        logger.info(
+            f"Using packing mode: concatenating and chunking into {block_size} token blocks"
+        )
 
         def tokenize(batch):
             enc = tokenizer(
@@ -458,7 +500,6 @@ def main(cfg: DictConfig):
     # Save processed data for train, validation, and test splits
     prepare_data(cfg.data, tokenizer, split="train")
     prepare_data(cfg.data, tokenizer, split="validation")
-
 
 
 if __name__ == "__main__":

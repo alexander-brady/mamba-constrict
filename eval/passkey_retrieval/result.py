@@ -30,7 +30,9 @@ def analyze_results(results_dir):
         for result in results:
             target_tokens = result["target_tokens"]
             stats_by_length[target_tokens]["total"] += 1
-            stats_by_length[target_tokens]["actual_token_sum"] += result["actual_tokens"]
+            stats_by_length[target_tokens]["actual_token_sum"] += result[
+                "actual_tokens"
+            ]
             if result["is_correct"]:
                 stats_by_length[target_tokens]["correct"] += 1
 

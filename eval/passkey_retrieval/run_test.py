@@ -21,10 +21,9 @@ import os
 import re
 
 import torch
+from passkey_utils import generate_prompt_random_depth
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
-from passkey_utils import generate_prompt_random_depth
 
 
 def calc_str_length(token_length, letters_per_token=3.65):
@@ -62,7 +61,9 @@ def query_llm(
         )
 
     # Decode only the new tokens
-    response = tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
+    response = tokenizer.decode(
+        outputs[0][input_ids.size(1) :], skip_special_tokens=True
+    )
     return response
 
 
@@ -92,9 +93,7 @@ def run_passkey_test(args):
     print(f"Loading model from: {model_name}")
     print(f"Device: {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name, trust_remote_code=True
-    )
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         trust_remote_code=True,
@@ -121,7 +120,9 @@ def run_passkey_test(args):
             # Convert token length to character length
             str_length = calc_str_length(target_tokens)
 
-            for i in tqdm(range(num_tests), desc=f"Tests (tokens={target_tokens})", leave=False):
+            for i in tqdm(
+                range(num_tests), desc=f"Tests (tokens={target_tokens})", leave=False
+            ):
                 key = f"{target_tokens}_{i}"
 
                 # Skip if already processed

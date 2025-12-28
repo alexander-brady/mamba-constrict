@@ -1,7 +1,6 @@
 """Shared utilities for passkey retrieval tasks."""
 
 import random
-from typing import Optional
 
 # Constants used in passkey tasks
 TASK_DESCRIPTION = "There is an important info hidden inside a lot of irrelevant text. Find it and memorize them. I will quiz you about the important information there."
@@ -35,9 +34,7 @@ def generate_garbage_text(n_chars: int) -> str:
 
 
 def generate_prompt_with_depth(
-    n_garbage: int,
-    depth: float,
-    seed: Optional[int] = None
+    n_garbage: int, depth: float, seed: int | None = None
 ) -> tuple[str, int]:
     """
     Generate a passkey prompt with specified depth.
@@ -78,8 +75,7 @@ def generate_prompt_with_depth(
 
 
 def generate_prompt_random_depth(
-    n_garbage: int,
-    seed: Optional[int] = None
+    n_garbage: int, seed: int | None = None
 ) -> tuple[str, int]:
     """
     Generate a passkey prompt with random depth.

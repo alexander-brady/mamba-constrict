@@ -6,7 +6,9 @@ from .base import Criterion
 class TemporalDrift(Criterion):
     """Penalize rapid changes across the sequence in the last hidden state."""
 
-    def __init__(self, weight: float = 1.0, reduce: str = "mean", order: int = 1) -> None:
+    def __init__(
+        self, weight: float = 1.0, reduce: str = "mean", order: int = 1
+    ) -> None:
         super().__init__(weight=weight)
         if reduce not in {"mean", "sum"}:
             msg = 'reduce must be either "mean" or "sum"'
@@ -30,4 +32,3 @@ class TemporalDrift(Criterion):
         if self.reduce == "mean":
             return penalty.mean()
         return penalty.sum()
-

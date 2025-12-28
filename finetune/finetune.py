@@ -35,8 +35,12 @@ def finetune(cfg: DictConfig):
     model.gradient_checkpointing_enable()
 
     # Load dataset
-    train_loader = load_dataloader(cfg.dataloader, split="train", save_dir=cfg.data["train"].save_dir)
-    val_loader = load_dataloader(cfg.dataloader, split="validation", save_dir=cfg.data["validation"].save_dir)
+    train_loader = load_dataloader(
+        cfg.dataloader, split="train", save_dir=cfg.data["train"].save_dir
+    )
+    val_loader = load_dataloader(
+        cfg.dataloader, split="validation", save_dir=cfg.data["validation"].save_dir
+    )
 
     # Prepare callbacks
     callbacks = [
@@ -83,4 +87,3 @@ def finetune(cfg: DictConfig):
     if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
         save_name += f"-{cfg.data.task}"
     fine_tuner.model.save_pretrained(f"{cfg.model_dir}/{save_name}")
-
