@@ -21,7 +21,7 @@ fi
 source "$PROJECT_DIR/.venv/bin/activate"
 
 if [ "$RESET_ENV" == "1" ]; then
-    python -m pip install -e "${PROJECT_DIR}" --quiet
+    python -m pip install -e "${PROJECT_DIR}" --no-build-isolation --quiet
 fi
 
 echo "Environment ready at $PROJECT_DIR/.venv"

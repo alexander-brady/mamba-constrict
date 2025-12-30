@@ -10,5 +10,8 @@ WORKDIR ${PROJECT_DIR}
 # Caches inside mounted directory
 ENV HF_HOME="${PROJECT_DIR}/.hf"
 
+# Uninstall to avoid conflicts with transformers
+RUN pip uninstall -y torchao || true
+
 ENTRYPOINT ["/bin/bash"]
 CMD ["-l"]
