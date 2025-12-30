@@ -10,7 +10,7 @@ fi
 # If venv does not exist, create it
 if [ ! -d "$PROJECT_DIR/.venv" ]; then
     RESET_ENV=1
-    python3.12 -m venv "$PROJECT_DIR/.venv"
+    python3.12 -m venv "$PROJECT_DIR/.venv" --system-site-packages
     export CAUSAL_CONV1D_FORCE_BUILD=true
     echo "Environment created at $PROJECT_DIR/.venv"
 else
@@ -21,7 +21,7 @@ fi
 source "$PROJECT_DIR/.venv/bin/activate"
 
 if [ "$RESET_ENV" == "1" ]; then
-    python -m pip install ${PROJECT_DIR} --quiet
+    python -m pip install -e "${PROJECT_DIR}" --quiet
 fi
 
 echo "Environment ready at $PROJECT_DIR/.venv"
