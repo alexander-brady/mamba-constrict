@@ -3,6 +3,7 @@ name = "finetune"
 version = "0.1.0"
 description = "Dynamic regularization for long-context Mamba finetuning"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
 dependencies = [
     "accelerate>=1.0",
