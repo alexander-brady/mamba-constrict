@@ -15,11 +15,10 @@
 
 echo "Beginning finetuning at $(date)"
 
-dir="$SCRATCH/finetune"
-export HF_HOME="$dir/.hf/" 
+source ./scripts/cscs/env.sh
 
 export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
 
-python -m finetune hydra.run.dir="$dir/outputs/finetune_$SLURM_JOB_ID"
+python -m finetune hydra.run.dir="$PROJECT_DIR/outputs/finetune_$SLURM_JOB_ID"
 
 echo "Finished finetuning at $(date)"

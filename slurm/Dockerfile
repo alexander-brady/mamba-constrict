@@ -1,20 +1,14 @@
 FROM nvcr.io/nvidia/pytorch:25.10-py3
 
-WORKDIR /workspace
-COPY . /workspace/
+# Configure project dir
+ARG PROJECT_DIR=/workspace
+ENV PROJECT_DIR="${PROJECT_DIR}"
 
-# toolchain + numpy early (avoids your earlier numpy warning during builds)
-RUN python -m pip install -U pip setuptools wheel numpy
+# Set working directory
+WORKDIR ${PROJECT_DIR}
 
-# (optional safety) if kernels ever sneaks in via other deps, remove it
-RUN pip uninstall -y kernels || true
+# Caches inside mounted directory
+ENV HF_HOME="${PROJECT_DIR}/.hf"
 
-# Build/install package + deps, but avoid isolated build env
-ENV CAUSAL_CONV1D_FORCE_BUILD=TRUE
-RUN python -m pip install --no-build-isolation .
-
-# Cleanup
-RUN pip uninstall -y torchao || true
-
-# sanity check (run-time GPU availability will still depend on podman run flags)
-RUN python -c "import torch; print(torch.__version__, torch.version.cuda)"
+ENTRYPOINT ["/bin/bash"]
+CMD ["-l"]

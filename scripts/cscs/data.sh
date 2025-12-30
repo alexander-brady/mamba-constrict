@@ -14,9 +14,9 @@
 
 echo "Beginning downloading data at $(date)"
 
-dir="$SCRATCH/finetune"
-pg19_dir="$dir/data/pg19"
-export HF_HOME="$dir/.hf/"
+source ./scripts/cscs/env.sh
+
+pg19_dir="$PROJECT_DIR/data/pg19"
 
 # Check if gsutil is installed
 if ! command -v gsutil &> /dev/null; then
@@ -43,7 +43,7 @@ fi
 popd
 
 python -m finetune.cli.prepare_data \
-    data.data_dir=$dir/data \
-    hydra.run.dir="$dir/outputs/data_$SLURM_JOB_ID"
+    data.data_dir=$PROJECT_DIR/data \
+    hydra.run.dir="$PROJECT_DIR/outputs/data_$SLURM_JOB_ID"
 
 echo "Finished downloading data at $(date)"

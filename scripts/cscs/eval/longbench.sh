@@ -16,10 +16,7 @@
 echo "Starting LongBench evaluation at $(date)"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
-
-python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
-
-cd /iopsstor/scratch/cscs/teilers/finetune/
+source ./scripts/cscs/env.sh
 
 # Get list of models using model_utils
 MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
@@ -34,10 +31,10 @@ for MODEL_NAME in $MODEL_NAMES; do
 
     # Run inference with local model
     pushd eval/LongBench > /dev/null
-    python pred.py --model "$MODEL_PATH" --save_dir /users/teilers/scratch/finetune/results/longbench
+    python3 pred.py --model "$MODEL_PATH" --save_dir /users/teilers/scratch/finetune/results/longbench
 
     # Export results
-    python result.py --results_dir /users/teilers/scratch/finetune/results/longbench
+    python3 result.py --results_dir /users/teilers/scratch/finetune/results/longbench
     popd > /dev/null
 done
 

@@ -4,7 +4,6 @@ mounts = [
     "/iopsstor",
     "/users",
 ]
-workdir = "/workspace"
 
 [annotations]
 com.hooks.aws_ofi_nccl.enabled = "true"
