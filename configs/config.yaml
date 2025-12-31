@@ -13,12 +13,15 @@ checkpoint_every_n_epochs: 10
 
 model_dir: models
 
+run_id: ${oc.env:SLURM_JOB_NAME}_${oc.env:MODEL_SIZE}_${oc.env:CRITERION}_${oc.env:LAMBDA}_${oc.env:SLURM_JOB_ID}
+
 wandb:
   project: finetune-mamba
   entity: mamba-monks
+  name: ${run_id}
 
 hydra:
   run:
-    dir: outputs/${oc.env:SLURM_JOB_NAME}_${oc.env:SLURM_JOB_ID}
+    dir: outputs/${run_id}
   sweep:
-    dir: outputs/${oc.env:SLURM_JOB_NAME}_${oc.env:SLURM_JOB_ID}
+    dir: outputs/${run_id}

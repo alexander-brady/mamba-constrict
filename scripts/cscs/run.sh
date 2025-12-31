@@ -17,10 +17,16 @@ echo "Beginning finetuning at $(date)"
 
 source ./scripts/cscs/env.sh
 
+export CRITERION=l1
+export LAMBDA=0.1
+export MODEL_SIZE=2.8b
+
 export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 python -m torch.distributed.run --nproc_per_node=4 -m finetune \
-    hydra.run.dir="$PROJECT_DIR/outputs/finetune_$SLURM_JOB_ID"
+    loss=$CRITERION \
+    loss.weight=$LAMBDA \
+    model.name=state-spaces/mamba-$MODEL_SIZE-hf \
 
 echo "Finished finetuning at $(date)"

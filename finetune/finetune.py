@@ -64,6 +64,7 @@ def finetune(cfg: DictConfig):
     loggers = [
         CSVLogger(save_dir=f"{hydra_wd}/logs", name="training_logs"),
         WandbLogger(
+            name=cfg.wandb.name,
             project=cfg.wandb.project,
             entity=cfg.wandb.entity,
             save_dir=hydra_wd,
