@@ -24,7 +24,7 @@ class MambaWithHidden(nn.Module):
         attention_mask: torch.Tensor | None = None,
         labels: torch.Tensor | None = None,
         **kwargs,
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         backbone_out = self.model.backbone(
             input_ids,
             attention_mask=attention_mask,
@@ -44,6 +44,10 @@ class MambaWithHidden(nn.Module):
             )
 
         return hidden_states, logits, loss
+    
+    def save_pretrained(self, *args, **kwargs):
+        """Save the underlying model."""
+        self.model.save_pretrained(*args, **kwargs)
 
 
 class FineTuner(L.LightningModule):

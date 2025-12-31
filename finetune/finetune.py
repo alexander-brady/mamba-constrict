@@ -86,4 +86,6 @@ def finetune(cfg: DictConfig):
     save_name = f"{model_name}-{dataset_name}"
     if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
         save_name += f"-{cfg.data.task}"
+        
     fine_tuner.model.save_pretrained(f"{cfg.model_dir}/{save_name}")
+    logger.info(f"Model saved to {cfg.model_dir}/{save_name}")
