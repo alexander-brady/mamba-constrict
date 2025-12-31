@@ -1,6 +1,6 @@
 _target_: finetune.criterion.MahalanobisEnergy
 weight: 0.1
-reduce: mean  # or sum
+reduction: mean  # or sum
 alpha: 0.99
 eps: 1e-6
 
