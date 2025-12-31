@@ -81,7 +81,7 @@ class FineTuner(L.LightningModule):
         )
         return loss + aux_loss
 
-    def validation_step(self, batch: dict, batch_idx: int) -> dict[str, float]:
+    def validation_step(self, batch: dict, batch_idx: int):
         with torch.inference_mode():
             hidden_states, logits, loss = self.model(**batch)
 
@@ -97,7 +97,6 @@ class FineTuner(L.LightningModule):
         self.log_dict(
             log_dict, prog_bar=True, sync_dist=True, batch_size=len(batch["input_ids"])
         )
-        return log_dict
 
     def configure_optimizers(self):
         optimizer = instantiate(self.cfg.optim, params=self.model.parameters())

@@ -14,7 +14,7 @@ from omegaconf import DictConfig, OmegaConf
 from transformers import AutoModelForCausalLM
 
 from .data import load_dataloader
-from .lightning import FineTuner
+from .lightning_module import FineTuner
 
 logger = logging.getLogger(__name__)
 
