@@ -4,6 +4,7 @@ import hydra
 import lightning as L
 import torch
 from hydra.core.hydra_config import HydraConfig
+from lightning.fabric.plugins.environments import SLURMEnvironment
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 from transformers import AutoModelForCausalLM
@@ -51,7 +52,12 @@ def finetune(cfg: DictConfig):
 
     # Instantiate fine-tuner and trainer
     fine_tuner = FineTuner(cfg, model)
-    trainer = L.Trainer(default_root_dir=hydra_wd, logger=loggers, **cfg.trainer)
+    trainer = L.Trainer(
+        default_root_dir=hydra_wd,
+        logger=loggers,
+        plugins=[SLURMEnvironment()],
+        **cfg.trainer,
+    )
 
     # Fine-tuning
     trainer.fit(fine_tuner, train_dataloaders=train_loader, val_dataloaders=val_loader)
