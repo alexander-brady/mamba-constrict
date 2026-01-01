@@ -1,6 +1,6 @@
 # Finetune Mamba
 
-This repository contains configurations and scripts to finetune large language models, specifically Mamba models, in a efficient manner on the Pile dataset.
+This repository contains configurations and scripts to finetune large language models, specifically Mamba models, using a novel hidden-state regularization auxiliary loss term.
 
 ## Installation
 
