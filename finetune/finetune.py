@@ -4,12 +4,7 @@ import hydra
 import lightning as L
 import torch
 from hydra.core.hydra_config import HydraConfig
-from lightning.pytorch.callbacks import (
-    DeviceStatsMonitor,
-    LearningRateMonitor,
-    ModelCheckpoint,
-)
-from lightning.pytorch.loggers import CSVLogger, WandbLogger
+from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 from transformers import AutoModelForCausalLM
 
@@ -42,27 +37,9 @@ def finetune(cfg: DictConfig):
         cfg.dataloader, split="validation", save_dir=cfg.data["validation"].save_dir
     )
 
-    # Prepare callbacks
-    callbacks = [
-        # Checkpointing
-        ModelCheckpoint(
-            dirpath=hydra_wd + "/checkpoints",
-            filename="{epoch:02d}-{val/loss:.4f}",
-            monitor="val/loss",
-            mode="min",
-            save_top_k=2,
-            save_last=True,
-            every_n_epochs=cfg.checkpoint_every_n_epochs,
-        ),
-        # Monitor learning rate
-        LearningRateMonitor(logging_interval="step"),
-        # Monitor GPU/CPU stats
-        DeviceStatsMonitor(cpu_stats=True),
-    ]
-
     # Prepare loggers
     loggers = [
-        CSVLogger(save_dir=f"{hydra_wd}/logs", name="training_logs"),
+        # Log metrics to Weights & Biases
         WandbLogger(
             name=cfg.wandb.name,
             project=cfg.wandb.project,
@@ -74,9 +51,7 @@ def finetune(cfg: DictConfig):
 
     # Instantiate fine-tuner and trainer
     fine_tuner = FineTuner(cfg, model)
-    trainer = L.Trainer(
-        default_root_dir=hydra_wd, logger=loggers, callbacks=callbacks, **cfg.trainer
-    )
+    trainer = L.Trainer(default_root_dir=hydra_wd, logger=loggers, **cfg.trainer)
 
     # Fine-tuning
     trainer.fit(fine_tuner, train_dataloaders=train_loader, val_dataloaders=val_loader)
@@ -87,6 +62,6 @@ def finetune(cfg: DictConfig):
     save_name = f"{model_name}-{dataset_name}"
     if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
         save_name += f"-{cfg.data.task}"
-        
+
     fine_tuner.model.save_pretrained(f"{cfg.model_dir}/{save_name}")
     logger.info(f"Model saved to {cfg.model_dir}/{save_name}")
