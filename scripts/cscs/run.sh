@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=large-sc-2
-#SBATCH --job-name=ft_10_steps
+#SBATCH --job-name=finetune
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --ntasks=1

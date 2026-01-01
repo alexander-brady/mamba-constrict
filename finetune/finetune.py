@@ -62,12 +62,16 @@ def finetune(cfg: DictConfig):
     # Fine-tuning
     trainer.fit(fine_tuner, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
-    # Build save path: models/model_name-dataset-task (task only for babilong)
+    # Build save path: models/model_name_criterion_dataset[_task]
     model_name = cfg.model.name.split("/")[-1]
-    dataset_name = cfg.data.name
-    save_name = f"{model_name}-{dataset_name}"
+    dataset_name = cfg.data.name.split("/")[-1]    
+    criterion_name = cfg.loss._target_.split(".")[-1].lower()
+    if cfg.loss.get("weight", None) is not None:
+        criterion_name += f"_w{cfg.loss.weight}"    
+    save_path = f"{cfg.model_dir}/{model_name}_{criterion_name}_{dataset_name}"
     if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
-        save_name += f"-{cfg.data.task}"
+        save_path += f"_{cfg.data.task}"
 
-    model.save_pretrained(f"{cfg.model_dir}/{save_name}")
-    logger.info(f"Model saved to {cfg.model_dir}/{save_name}")
+    # Save the fine-tuned model
+    model.save_pretrained(save_path)
+    logger.info(f"Model saved to {save_path}")

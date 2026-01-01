@@ -12,7 +12,7 @@ seed: 42
 
 model_dir: models
 
-run_id: ${oc.env:SLURM_JOB_NAME}_${oc.env:MODEL_SIZE}_${oc.env:CRITERION}_${oc.env:LAMBDA}_${oc.env:SLURM_JOB_ID}
+run_id: ${oc.env:SLURM_JOB_NAME}_${oc.env:MODEL_SIZE}_${oc.env:CRITERION}_w${oc.env:LAMBDA}_${oc.env:SLURM_JOB_ID}
 
 wandb:
   project: finetune-mamba
