@@ -1,33 +1,24 @@
 import lightning as L
 import torch
-import torch.nn as nn
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from transformers import PreTrainedModel
 
 
-class MambaWithHidden(nn.Module):
-    """
-    Minimal wrapper around a HF Mamba2ForCausalLM model to expose:
-      - last_hidden_state (final layer)
-      - logits
-      - loss
-    """
+class FineTuner(L.LightningModule):
+    """Fine-tuning module for a pre-trained model."""
 
-    def __init__(self, mamba_lm: PreTrainedModel):
+    def __init__(self, cfg: DictConfig, model: PreTrainedModel):
         super().__init__()
-        self.model = mamba_lm
+        self.cfg = cfg
+        self.model = model
+        self.auxiliary_loss = instantiate(self.cfg.loss)
+        self.save_hyperparameters(cfg)
 
-    def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor | None = None,
-        labels: torch.Tensor | None = None,
-        **kwargs,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    def forward(self, **batch):
         backbone_out = self.model.backbone(
-            input_ids,
-            attention_mask=attention_mask,
+            batch["input_ids"],
+            attention_mask=batch.get("attention_mask"),
             output_hidden_states=False,
             return_dict=True,
         )
@@ -38,34 +29,18 @@ class MambaWithHidden(nn.Module):
         ).float()
 
         loss = None
-        if labels is not None:
+        if "labels" in batch:
             loss = self.model.loss_function(
-                logits=logits, labels=labels, vocab_size=self.model.config.vocab_size
+                logits=logits,
+                labels=batch["labels"],
+                vocab_size=self.model.config.vocab_size,
             )
 
         return hidden_states, logits, loss
-    
-    def save_pretrained(self, *args, **kwargs):
-        """Save the underlying model."""
-        self.model.save_pretrained(*args, **kwargs)
-
-
-class FineTuner(L.LightningModule):
-    """Fine-tuning module for a pre-trained model."""
-
-    def __init__(self, cfg: DictConfig, model: PreTrainedModel):
-        super().__init__()
-        self.cfg = cfg
-        self.model = MambaWithHidden(model)
-        self.auxiliary_loss = instantiate(self.cfg.loss)
-        self.save_hyperparameters(cfg)
-
-    def forward(self, **batch):
-        return self.model(**batch)
 
     def training_step(self, batch: dict, batch_idx: int):
         # Forward pass with hidden states output
-        hidden_states, logits, loss = self.model(**batch)
+        hidden_states, logits, loss = self(**batch)
 
         # Compute auxiliary loss using hidden states
         aux_loss = self.auxiliary_loss(hidden_states)
@@ -83,7 +58,7 @@ class FineTuner(L.LightningModule):
 
     def validation_step(self, batch: dict, batch_idx: int):
         with torch.inference_mode():
-            hidden_states, logits, loss = self.model(**batch)
+            hidden_states, logits, loss = self(**batch)
 
             accuracy = (logits.argmax(dim=-1) == batch["labels"]).float().mean()
             aux_loss = self.auxiliary_loss(hidden_states)
