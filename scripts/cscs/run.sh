@@ -3,7 +3,6 @@
 #SBATCH --job-name=finetune
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
@@ -23,7 +22,7 @@ export MODEL_SIZE=2.8b
 export TOKENIZERS_PARALLELISM=false  # Disable tokenizer parallelism to avoid deadlocks
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-python -m finetune \
+srun $PROJECT_DIR/.venv/bin/python -m finetune \
     loss=$CRITERION \
     loss.weight=$LAMBDA \
     model.name=state-spaces/mamba-$MODEL_SIZE-hf \
