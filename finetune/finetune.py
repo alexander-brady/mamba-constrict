@@ -1,4 +1,5 @@
 import logging
+import os
 
 import hydra
 import lightning as L
@@ -20,7 +21,7 @@ def finetune(cfg: DictConfig):
     # Get local rank for distributed training
     rank = int(os.environ["SLURM_LOCALID"])
     logger.info(f"Local rank: {rank}")
-    
+
     # Log Hydra working directory
     hydra_wd = HydraConfig.get().runtime.output_dir
     if rank == 0:
@@ -70,10 +71,10 @@ def finetune(cfg: DictConfig):
     if rank == 0:
         # Build save path: models/model_name_criterion_dataset[_task]
         model_name = cfg.model.name.split("/")[-1]
-        dataset_name = cfg.data.name.split("/")[-1]    
+        dataset_name = cfg.data.name.split("/")[-1]
         criterion_name = cfg.loss._target_.split(".")[-1].lower()
         if cfg.loss.get("weight", None) is not None:
-            criterion_name += f"_w{cfg.loss.weight}"    
+            criterion_name += f"_w{cfg.loss.weight}"
         save_path = f"{cfg.model_dir}/{model_name}_{criterion_name}_{dataset_name}"
         if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
             save_path += f"_{cfg.data.task}"
