@@ -20,6 +20,9 @@ outputs/
 # Logs
 logs/
 
+# Results
+results/
+
 # Models (local copies and finetuned models)
 # Keep the directory structure and huggingface_models.txt but ignore model weights
 models/*
