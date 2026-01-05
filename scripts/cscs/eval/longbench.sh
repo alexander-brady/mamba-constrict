@@ -1,22 +1,31 @@
 #!/bin/bash
-#SBATCH --account=a163
+#SBATCH --account=large-sc-2
 #SBATCH --time=12:00:00
 #SBATCH --job-name=longbench-eval
-#SBATCH --output=/logs/%x-%j.out
-#SBATCH --error=/logs/%x-%j.err
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --environment=finetune
+#SBATCH --environment=vllm
 #SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
 echo "Starting LongBench evaluation at $(date)"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
-source ./scripts/cscs/env.sh
+
+echo "Install missing dependencies for vLLM container"
+# Install missing dependencies for vLLM container (only if not already installed)
+python3 -c "import datasets" 2>/dev/null || pip install -q datasets==3.6.0
+python3 -c "import tqdm" 2>/dev/null || pip install -q tqdm
+echo "Install completed"
+
+# Create results directory
+RESULTS_DIR="/users/ezorlutuna/scratch/finetune/results/longbench"
+mkdir -p "$RESULTS_DIR"
 
 # Get list of models using model_utils
 MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
@@ -31,10 +40,10 @@ for MODEL_NAME in $MODEL_NAMES; do
 
     # Run inference with local model
     pushd eval/LongBench > /dev/null
-    python3 pred.py --model "$MODEL_PATH" --save_dir /users/teilers/scratch/finetune/results/longbench
+    python3 pred.py --model "$MODEL_PATH" --save_dir /users/ezorlutuna/scratch/finetune/results/longbench
 
     # Export results
-    python3 result.py --results_dir /users/teilers/scratch/finetune/results/longbench
+    python3 result.py --results_dir /users/ezorlutuna/scratch/finetune/results/longbench
     popd > /dev/null
 done
 

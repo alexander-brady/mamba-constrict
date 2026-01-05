@@ -4,10 +4,9 @@ import logging
 import os
 import re
 
-import torch
 from datasets import load_dataset
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from vllm import LLM, SamplingParams
 
 logger = logging.getLogger(__name__)
 
@@ -20,31 +19,23 @@ template_0shot_cot_ans = open("prompts/0shot_cot_ans.txt", encoding="utf-8").rea
 
 def query_llm(
     prompt,
-    model,
-    tokenizer,
+    llm,
     temperature=0.5,
-    max_new_tokens=128,
+    max_tokens=128,
 ):
-    """Query the local model with the given prompt."""
-    # Tokenize prompt (no truncation for SSMs)
-    input_ids = tokenizer.encode(prompt, add_special_tokens=True)
-
-    # Generate
-    input_tensor = torch.tensor([input_ids]).to(model.device)
-
-    with torch.inference_mode():
-        output_ids = model.generate(
-            input_tensor,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature if temperature > 0 else 1.0,
-            do_sample=temperature > 0,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-
-    # Decode only the generated part
-    generated_ids = output_ids[0][len(input_ids) :]
-    response = tokenizer.decode(generated_ids, skip_special_tokens=True)
-
+    """Query the model with vLLM (no truncation - vLLM handles long contexts automatically)."""
+    # Set up sampling parameters
+    sampling_params = SamplingParams(
+        temperature=temperature if temperature > 0 else 0.0,
+        max_tokens=max_tokens,
+    )
+    
+    # Generate - vLLM handles tokenization and generation internally
+    outputs = llm.generate([prompt], sampling_params)
+    
+    # Extract the generated text (vLLM returns only the generated part, not the prompt)
+    response = outputs[0].outputs[0].text
+    
     return response
 
 
@@ -61,7 +52,7 @@ def extract_answer(response):
             return None
 
 
-def get_pred(data, model, tokenizer, args, fout, model_name):
+def get_pred(data, llm, args, fout, model_name):
     """Run prediction on data samples."""
     correct_count = 0
     total_processed = 0
@@ -94,11 +85,11 @@ def get_pred(data, model, tokenizer, args, fout, model_name):
         )
         if args.cot:
             output = query_llm(
-                prompt, model, tokenizer, temperature=0.1, max_new_tokens=1024
+                prompt, llm, temperature=0.1, max_tokens=1024
             )
         else:
             output = query_llm(
-                prompt, model, tokenizer, temperature=0.1, max_new_tokens=128
+                prompt, llm, temperature=0.1, max_tokens=128
             )
         if output == "":
             continue
@@ -115,7 +106,7 @@ def get_pred(data, model, tokenizer, args, fout, model_name):
                 .replace("$COT$", response)
             )
             output = query_llm(
-                prompt, model, tokenizer, temperature=0.1, max_new_tokens=128
+                prompt, llm, temperature=0.1, max_tokens=128
             )
             if output == "":
                 continue
@@ -176,18 +167,15 @@ def main():
     else:
         out_file = os.path.join(args.save_dir, args.model.split("/")[-1] + ".jsonl")
 
-    # Load model and tokenizer
-    logger.info(f"[{model_name}] Loading model...")
-    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
-
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model,
-        dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
+    # Load model with vLLM
+    logger.info(f"[{model_name}] Loading model with vLLM...")
+    llm = LLM(
+        model=args.model,
+        trust_remote_code=True,  # Required for Mamba models
+        dtype="bfloat16",
+        max_model_len=1000000,  # Set high limit for Mamba models (they support long contexts)
     )
-    model.eval()
-    logger.info(f"[{model_name}] Model loaded on device: {model.device}")
+    logger.info(f"[{model_name}] Model loaded successfully with vLLM")
 
     # Load dataset
     logger.info(f"[{model_name}] Loading dataset...")
@@ -218,11 +206,12 @@ def main():
         logger.info(f"[{model_name}] Resuming: {len(has_data)} already processed")
 
     data = [item for item in data_all if item["_id"] not in has_data]
+    data = data[:10]  # TEMPORARY: Limit to first 10 samples for testing
     logger.info(f"[{model_name}] Processing {len(data)}/{len(data_all)} samples")
 
     # Run prediction
     fout = open(out_file, "a", encoding="utf-8")
-    get_pred(data, model, tokenizer, args, fout, model_name)
+    get_pred(data, llm, args, fout, model_name)
     fout.close()
     logger.info("=" * 60)
     logger.info(f"LongBench-v2 Completed - Model: {model_name}")
