@@ -206,7 +206,7 @@ def main():
         logger.info(f"[{model_name}] Resuming: {len(has_data)} already processed")
 
     data = [item for item in data_all if item["_id"] not in has_data]
-    data = data[:10]  # TEMPORARY: Limit to first 10 samples for testing
+    # data = data[:10]  # TEMPORARY: Limit to first 10 samples for testing
     logger.info(f"[{model_name}] Processing {len(data)}/{len(data_all)} samples")
 
     # Run prediction
