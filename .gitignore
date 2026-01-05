@@ -44,3 +44,5 @@ desktop.ini
 # IDE files
 .vscode/
 .idea/
+results/
+models/

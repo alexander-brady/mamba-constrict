@@ -1,0 +1,17 @@
+# Use official vLLM Docker image as base
+# This image already has PyTorch GPU and vLLM properly installed
+FROM vllm/vllm-openai:latest
+
+# Configure project dir
+ARG PROJECT_DIR=/workspace
+ENV PROJECT_DIR="${PROJECT_DIR}"
+
+# Set working directory
+WORKDIR ${PROJECT_DIR}
+
+# Caches inside mounted directory
+ENV HF_HOME="${PROJECT_DIR}/.hf"
+
+ENTRYPOINT ["/bin/bash"]
+CMD ["-l"]
+
