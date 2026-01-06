@@ -6,11 +6,20 @@ FROM vllm/vllm-openai:latest
 ARG PROJECT_DIR=/workspace
 ENV PROJECT_DIR="${PROJECT_DIR}"
 
-# Install additional dependencies
-RUN pip install -q datasets==3.6.0 tqdm
+# Install git
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Lm-evaluation harness
-RUN pip install lm-eval
+# Install additional dependencies
+RUN pip install -q datasets==3.6.0 tqdm wandb
+
+# Set commit hash
+ARG LM_EVAL_COMMIT=5d7dc4c0bbaac6f1186a8086bbb9c1da43be24cf
+
+# Clone and install LM Evaluation Harness
+RUN git clone https://github.com/EleutherAI/lm-evaluation-harness.git \
+    && cd lm-evaluation-harness \
+    && git checkout ${LM_EVAL_COMMIT} \
+    && pip install .
 
 # Set working directory
 WORKDIR ${PROJECT_DIR}

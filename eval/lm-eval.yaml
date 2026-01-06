@@ -1,0 +1,15 @@
+model: vllm
+model_args:
+  pretrained: state-spaces/mamba-2.8b-hf
+  tokenizer: state-spaces/mamba-2.8b-hf
+  tensor_parallel_size: 4
+  trust_remote_code: true
+  dtype: bfloat16
+tasks:
+  - gsm8k
+  - mmlu_pro
+output_path: ./results/lm-eval/mamba-2.8b
+wandb_args:
+  project: eval-mamba
+  entity: mamba-monks
+  dir: ./results/lm-eval
