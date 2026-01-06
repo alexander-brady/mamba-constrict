@@ -9,7 +9,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --environment=vllm
+#SBATCH --environment=eval
 #SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
@@ -17,14 +17,8 @@ echo "Starting LongBench evaluation at $(date)"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
-echo "Install missing dependencies for vLLM container"
-# Install missing dependencies for vLLM container (only if not already installed)
-python3 -c "import datasets" 2>/dev/null || pip install -q datasets==3.6.0
-python3 -c "import tqdm" 2>/dev/null || pip install -q tqdm
-echo "Install completed"
-
 # Create results directory
-RESULTS_DIR="/users/ezorlutuna/scratch/finetune/results/longbench"
+RESULTS_DIR="$PROJECT_DIR/results/longbench"
 mkdir -p "$RESULTS_DIR"
 
 # Get list of models using model_utils
@@ -40,10 +34,10 @@ for MODEL_NAME in $MODEL_NAMES; do
 
     # Run inference with local model
     pushd eval/LongBench > /dev/null
-    python3 pred.py --model "$MODEL_PATH" --save_dir /users/ezorlutuna/scratch/finetune/results/longbench
+    python3 pred.py --model "$MODEL_PATH" --save_dir "$RESULTS_DIR"
 
     # Export results
-    python3 result.py --results_dir /users/ezorlutuna/scratch/finetune/results/longbench
+    python3 result.py --results_dir "$RESULTS_DIR"
     popd > /dev/null
 done
 

@@ -6,6 +6,9 @@ FROM vllm/vllm-openai:latest
 ARG PROJECT_DIR=/workspace
 ENV PROJECT_DIR="${PROJECT_DIR}"
 
+# Install additional dependencies
+RUN pip install -q datasets==3.6.0 tqdm
+
 # Set working directory
 WORKDIR ${PROJECT_DIR}
 
