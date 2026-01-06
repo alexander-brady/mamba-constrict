@@ -9,6 +9,9 @@ ENV PROJECT_DIR="${PROJECT_DIR}"
 # Install additional dependencies
 RUN pip install -q datasets==3.6.0 tqdm
 
+# Lm-evaluation harness
+RUN pip install lm-eval
+
 # Set working directory
 WORKDIR ${PROJECT_DIR}
 
