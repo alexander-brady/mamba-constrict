@@ -1,0 +1,3 @@
+[submodule "eval/lm-evaluation-harness"]
+	path = eval/lm-evaluation-harness
+	url = https://github.com/EleutherAI/lm-evaluation-harness.git
