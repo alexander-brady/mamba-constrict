@@ -19,7 +19,7 @@ MODEL_NAME="${MODEL_PATH##*/}"
 
 echo "Starting LM-eval of $MODEL_NAME at $(date)"
 
-MODEL_ARGS="pretrained=${MODEL_PATH} tokenizer=state-spaces/mamba-2.8b-hf tensor_parallel_size=4 dtype=bfloat16 trust_remote_code=True"
+MODEL_ARGS="pretrained=${MODEL_PATH} tokenizer=state-spaces/mamba-2.8b-hf tensor_parallel_size=4 dtype=bfloat16 trust_remote_code=True max_model_len=32768 "
 lm-eval run --config ${PROJECT_DIR}/eval/lm-eval.yaml --model_args ${MODEL_ARGS} --output_path ${PROJECT_DIR}/results/lm-eval/${MODEL_NAME}
 
 echo "Finished LM-eval evaluation at $(date)"
