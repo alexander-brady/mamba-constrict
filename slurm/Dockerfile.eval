@@ -19,7 +19,7 @@ ARG LM_EVAL_COMMIT=5d7dc4c0bbaac6f1186a8086bbb9c1da43be24cf
 RUN git clone https://github.com/EleutherAI/lm-evaluation-harness.git \
     && cd lm-evaluation-harness \
     && git checkout ${LM_EVAL_COMMIT} \
-    && pip install .
+    && pip install .["longbench"]
 
 # Set working directory
 WORKDIR ${PROJECT_DIR}
