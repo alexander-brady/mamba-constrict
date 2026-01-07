@@ -20,10 +20,9 @@ import json
 import os
 import re
 
-import torch
 from passkey_utils import generate_prompt_random_depth
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from vllm import LLM, SamplingParams
 
 
 def calc_str_length(token_length, letters_per_token=3.65):
@@ -38,32 +37,23 @@ def generate_prompt(n_garbage, seed=None):
 
 def query_llm(
     prompt,
-    model,
-    tokenizer,
-    device,
+    llm,
     temperature=0.0,
-    max_new_tokens=10,
+    max_tokens=10,
 ):
-    """Query the LLM using local model."""
-    # Tokenize prompt (no truncation for SSMs)
-    input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
-
-    # Generate response
-    # use_cache=False to avoid memory issues with long contexts
-    with torch.no_grad():
-        outputs = model.generate(
-            input_ids,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature if temperature > 0 else None,
-            do_sample=temperature > 0,
-            pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
-            use_cache=False,
-        )
-
-    # Decode only the new tokens
-    response = tokenizer.decode(
-        outputs[0][input_ids.size(1) :], skip_special_tokens=True
+    """Query the model with vLLM (no truncation - vLLM handles long contexts automatically)."""
+    # Set up sampling parameters
+    sampling_params = SamplingParams(
+        temperature=temperature if temperature > 0 else 0.0,
+        max_tokens=max_tokens,
     )
+
+    # Generate - vLLM handles tokenization and generation internally
+    outputs = llm.generate([prompt], sampling_params)
+
+    # Extract the generated text (vLLM returns only the generated part, not the prompt)
+    response = outputs[0].outputs[0].text
+
     return response
 
 
@@ -86,20 +76,16 @@ def run_passkey_test(args):
     token_lengths = args.token_lengths
     num_tests = args.num_tests
 
-    # Setup device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Load model and tokenizer
+    # Load model with vLLM
     print(f"Loading model from: {model_name}")
-    print(f"Device: {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
+    llm = LLM(
+        model=model_name,
         trust_remote_code=True,
-        device_map="auto" if torch.cuda.is_available() else None,
+        dtype="bfloat16",
+        max_model_len=1000000,
     )
-    model.eval()
+    print("Model loaded successfully with vLLM")
 
     # Prepare output directory and file
     os.makedirs(args.save_dir, exist_ok=True)
@@ -136,17 +122,13 @@ def run_passkey_test(args):
                 # Generate prompt and get expected passkey
                 prompt_text, expected_passkey = generate_prompt(str_length, seed=i)
 
-                # Get actual number of tokens
-                actual_tokens = len(tokenizer.encode(prompt_text))
 
                 # Query the model
                 response = query_llm(
                     prompt_text,
-                    model,
-                    tokenizer,
-                    device,
+                    llm,
                     temperature=0.0,
-                    max_new_tokens=10,
+                    max_tokens=10,
                 )
 
                 # Extract passkey from response
@@ -158,8 +140,6 @@ def run_passkey_test(args):
                 # Store result
                 result = {
                     "test_id": i,
-                    "target_tokens": target_tokens,
-                    "actual_tokens": actual_tokens,
                     "str_length": str_length,
                     "expected_passkey": expected_passkey,
                     "predicted_passkey": predicted_passkey,

@@ -6,115 +6,65 @@ from pathlib import Path
 
 import datasets
 import pandas as pd
-import requests
-import torch
 from prompts import DEFAULT_PROMPTS, DEFAULT_TEMPLATE, get_formatted_input
 from tqdm.auto import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from vllm import LLM, SamplingParams
 
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
 
+def query_llm(prompt, llm, temperature=0.0, max_tokens=20):
+    """Query the model with vLLM."""
+    sampling_params = SamplingParams(
+        temperature=temperature if temperature > 0 else 0.0,
+        max_tokens=max_tokens,
+    )
+
+    outputs = llm.generate([prompt], sampling_params)
+    response = outputs[0].outputs[0].text
+
+    return response
+
+
 def main(
     results_folder: str,
     model_name: str,
     model_path: str,
-    tokenizer_name: str,
-    tokenizer_path: str,
     tasks: list[str],
     split_names: list[str],
     dataset_name: str,
-    use_chat_template: bool,
-    api_url: str,
     use_instruction: bool,
     use_examples: bool,
     use_post_prompt: bool,
-    system_prompt: str,
-    load_in_8bit: bool,
-    load_in_4bit: bool,
 ) -> None:
     """
-    Main function to get model predictions on babilong and save them.
-    This function supports both local models using the transformers library and remote (local) models accessed via an
-    API URL, running with llamacpp or vllm.
+    Main function to get model predictions on babilong and save them using vLLM.
 
     Args:
         results_folder (str): Folder to store results.
-        model_name (str): Name of the model to use (will be used in from_pretrained and to save model results)
-        model_path (str): path to local model weights
-        tokenizer_name (str): tokenizer to use in .from_pretrained, model_name is used if not specified
-        tokenizer_path (str): path to tokenizer to use in .from_pretrained
+        model_name (str): Name of the model (used to save model results)
+        model_path (str): path to local model weights or HuggingFace model ID
         tasks (List[str]): List of tasks to evaluate.
         split_names (List[str]): List of lengths to evaluate.
         dataset_name (str): Dataset name from Hugging Face.
-        use_chat_template (bool): Flag to use the tokenizer chat template.
-        api_url (str): API endpoint for llama.cpp.
         use_instruction (bool): Flag to use instruction in prompt.
         use_examples (bool): Flag to use examples in prompt.
         use_post_prompt (bool): Flag to use post_prompt text in prompt.
-        system_prompt (str): system prompt to use with chat template (e.g., "You are a helpful AI assistant.")
-        load_in_8bit (bool): load in 8 bit with bitsandbytes
-        load_in_4bit (bool): load in 4 bit with bitsandbytes
     """
     if model_path is None:
-        # use model from transformerss
         model_path = model_name
 
-    if tokenizer_path is None:
-        tokenizer_path = tokenizer_name
-        if tokenizer_path is None:
-            tokenizer_path = model_path
-
-    quantization_config = None
-    if load_in_8bit or load_in_4bit:
-        quantization_config = BitsAndBytesConfig(
-            load_in_8bit=load_in_8bit, load_in_4bit=load_in_4bit
-        )
-
-    dtype = torch.bfloat16
-
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
-    if not api_url:
-        # load the model locally if llamacpp / vllm APIs are not used
-        try:
-            print("trying to load model with flash attention 2...")
-            model = AutoModelForCausalLM.from_pretrained(
-                model_path,
-                trust_remote_code=True,
-                device_map="auto",
-                torch_dtype=dtype,
-                attn_implementation="flash_attention_2",
-                quantization_config=quantization_config,
-            )
-        except ValueError as e:
-            print(e)
-            print("trying to load model without flash attention 2...")
-            model = AutoModelForCausalLM.from_pretrained(
-                model_path,
-                trust_remote_code=True,
-                device_map="auto",
-                torch_dtype=dtype,
-                quantization_config=quantization_config,
-            )
-
-        model = model.eval()
-
-    # define generation parameters
-    generate_kwargs = {
-        "max_new_tokens": 20,
-        "max_length": None,
-        "num_beams": 1,
-        "do_sample": False,
-        "temperature": None,
-        "top_p": None,
-        "top_k": None,
-        "pad_token_id": tokenizer.pad_token_id,
-    }
-
-    if generate_kwargs["pad_token_id"] is None:
-        generate_kwargs["pad_token_id"] = tokenizer.eos_token_id
+    # Load model with vLLM
+    print(f"Loading model with vLLM: {model_path}")
+    llm = LLM(
+        model=model_path,
+        trust_remote_code=True,
+        dtype="bfloat16",
+        max_model_len=1000000,
+    )
+    print("Model loaded successfully with vLLM")
 
     print(f"prompt template:\n{DEFAULT_TEMPLATE}")
 
@@ -129,8 +79,6 @@ def main(
             if use_post_prompt
             else "",
             "template": DEFAULT_TEMPLATE,
-            "chat_template": use_chat_template,
-            "system_prompt": system_prompt,
         }
         prompt_name = [
             f"{k}_yes" if prompt_cfg[k] else f"{k}_no"
@@ -151,7 +99,7 @@ def main(
             outfile.parent.mkdir(parents=True, exist_ok=True)
             cfg_file = f"./{results_folder}/{model_name}/{task}_{split_name}_{prompt_name}.json"
             json.dump(
-                {"prompt": prompt_cfg, "generate_kwargs": generate_kwargs},
+                {"prompt": prompt_cfg},
                 open(cfg_file, "w"),
                 indent=4,
             )
@@ -173,77 +121,9 @@ def main(
                     template=prompt_cfg["template"],
                 )
 
-                if api_url:
-                    # model is running via llamacpp's serve command
-                    headers = {"Content-Type": "application/json"}
-                    if generate_kwargs["temperature"] is None:
-                        generate_kwargs["temperature"] = 0.0
-
-                    if use_chat_template:
-                        input_text = [{"role": "user", "content": input_text}]
-                        if system_prompt:
-                            input_text = [
-                                {"role": "system", "content": system_prompt}
-                            ] + input_text
-                        model_inputs = tokenizer.apply_chat_template(
-                            input_text, tokenize=True, add_generation_prompt=True
-                        )
-                    else:
-                        model_inputs = tokenizer.encode(
-                            input_text, add_special_tokens=True
-                        )
-
-                    request_data = {
-                        "prompt": model_inputs,
-                        "temperature": generate_kwargs["temperature"],
-                        "model": model_name,
-                    }
-                    response = requests.post(
-                        api_url, headers=headers, json=request_data
-                    ).json()
-
-                    if "content" in response:
-                        # llamacpp
-                        output = response["content"].strip()
-                    elif "choices" in response:
-                        # openai compatible api (vllm)
-                        output = response["choices"][0]["text"].strip()
-                else:
-                    # generate output using local model
-                    if model.name_or_path in ["THUDM/chatglm3-6b-128k"]:
-                        # have to add special code to run chatglm as tokenizer.chat_template tokenization is not
-                        # the same as in model.chat (recommended in https://huggingface.co/THUDM/chatglm3-6b-128k)
-                        with torch.no_grad():
-                            output, _ = model.chat(
-                                tokenizer, input_text, history=[], **generate_kwargs
-                            )
-                    else:
-                        if use_chat_template:
-                            input_text = [{"role": "user", "content": input_text}]
-                            model_inputs = tokenizer.apply_chat_template(
-                                input_text,
-                                add_generation_prompt=True,
-                                return_tensors="pt",
-                            ).to(model.device)
-                            model_inputs = {"input_ids": model_inputs}
-                        else:
-                            model_inputs = tokenizer(
-                                input_text, return_tensors="pt", add_special_tokens=True
-                            ).to(model.device)
-
-                        sample_length = model_inputs["input_ids"].shape[1]
-                        with torch.no_grad():
-                            output = model.generate(**model_inputs, **generate_kwargs)
-                            # we need to reset memory states between samples for activation-beacon models
-                            if "activation-beacon" in model.name_or_path and hasattr(
-                                model, "memory"
-                            ):
-                                model.memory.reset()
-
-                        output = output[0][sample_length:]
-                        output = tokenizer.decode(
-                            output, skip_special_tokens=True
-                        ).strip()
+                # Generate output using vLLM
+                output = query_llm(input_text, llm, temperature=0.0, max_tokens=20)
+                output = output.strip()
 
                 df.loc[len(df)] = [target, output, question]
                 # write results to csv file
@@ -273,18 +153,6 @@ if __name__ == "__main__":
         "--model_path", type=str, required=False, help="path to model, optional"
     )
     parser.add_argument(
-        "--tokenizer_name",
-        type=str,
-        required=False,
-        help="tokenizer to use in .from_pretrained",
-    )
-    parser.add_argument(
-        "--tokenizer_path",
-        type=str,
-        required=False,
-        help="path to tokenizer to use in .from_pretrained",
-    )
-    parser.add_argument(
         "--tasks",
         type=str,
         nargs="+",
@@ -299,9 +167,6 @@ if __name__ == "__main__":
         help="List of lengths to evaluate: 0k 1k ...",
     )
     parser.add_argument(
-        "--use_chat_template", action="store_true", help="Use tokenizer chat template"
-    )
-    parser.add_argument(
         "--use_instruction", action="store_true", help="Use instruction in prompt"
     )
     parser.add_argument(
@@ -309,26 +174,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--use_post_prompt", action="store_true", help="Use post prompt text in prompt"
-    )
-    parser.add_argument(
-        "--system_prompt",
-        type=str,
-        required=False,
-        default="",
-        help="system prompt to use in chat template",
-    )
-    parser.add_argument(
-        "--api_url",
-        type=str,
-        required=True,
-        default="",
-        help="llamacpp/vllm api endpoint",
-    )
-    parser.add_argument(
-        "--load_in_8bit", action="store_true", help="load in 8 bit with bitsandbytes"
-    )
-    parser.add_argument(
-        "--load_in_4bit", action="store_true", help="load in 4 bit with bitsandbytes"
     )
 
     args = parser.parse_args()
@@ -339,17 +184,10 @@ if __name__ == "__main__":
         args.results_folder,
         args.model_name,
         args.model_path,
-        args.tokenizer_name,
-        args.tokenizer_path,
         args.tasks,
         args.lengths,
         args.dataset_name,
-        args.use_chat_template,
-        args.api_url,
         args.use_instruction,
         args.use_examples,
         args.use_post_prompt,
-        args.system_prompt,
-        args.load_in_8bit,
-        args.load_in_4bit,
     )
