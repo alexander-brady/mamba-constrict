@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=large-sc-2
+#SBATCH --account=a163
 #SBATCH --job-name=data_download
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
@@ -7,7 +7,7 @@
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=8
 #SBATCH --nodes=1
-#SBATCH --time=02:00:00
+#SBATCH --time=12:00:00
 #SBATCH --environment=finetune
 #SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
 #SBATCH -C thp_never&nvidia_vboost_enabled

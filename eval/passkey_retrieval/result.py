@@ -24,34 +24,26 @@ def analyze_results(results_dir):
 
         # Aggregate by token length
         stats_by_length = defaultdict(
-            lambda: {"total": 0, "correct": 0, "actual_token_sum": 0}
+            lambda: {"total": 0, "correct": 0}
         )
 
         for result in results:
             target_tokens = result["target_tokens"]
             stats_by_length[target_tokens]["total"] += 1
-            stats_by_length[target_tokens]["actual_token_sum"] += result[
-                "actual_tokens"
-            ]
             if result["is_correct"]:
                 stats_by_length[target_tokens]["correct"] += 1
 
         # Calculate accuracy and average tokens for each length
         accuracies = {}
-        avg_tokens = {}
         for target_tokens in stats_by_length:
             stats = stats_by_length[target_tokens]
             accuracies[target_tokens] = (
                 (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
             )
-            avg_tokens[target_tokens] = (
-                stats["actual_token_sum"] / stats["total"] if stats["total"] > 0 else 0
-            )
 
         results_by_model[model_name] = {
             "stats": stats_by_length,
             "accuracies": accuracies,
-            "avg_tokens": avg_tokens,
         }
 
     return results_by_model
@@ -98,7 +90,6 @@ def main():
     for model_name in sorted(results_by_model.keys()):
         model_data = results_by_model[model_name]
         accuracies = model_data["accuracies"]
-        avg_tokens = model_data["avg_tokens"]
         stats = model_data["stats"]
 
         # Calculate overall accuracy
@@ -110,8 +101,7 @@ def main():
         row_parts = [model_name, f"{overall_acc:.1f}"]
         for length in sorted_lengths:
             if length in accuracies:
-                avg = avg_tokens[length]
-                row_parts.append(f"{accuracies[length]:.1f} ({avg:.0f})")
+                row_parts.append(f"{accuracies[length]:.1f}")
             else:
                 row_parts.append("-")
 
