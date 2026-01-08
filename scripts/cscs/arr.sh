@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=a163
-#SBATCH --job-name=train_eval
+#SBATCH --job-name=submit_arr
 #SBATCH --output=logs/%x_%A_%a.out
 #SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --time=00:05:00
