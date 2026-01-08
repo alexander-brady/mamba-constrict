@@ -83,7 +83,7 @@ def run_passkey_test(args):
         model=model_name,
         trust_remote_code=True,
         dtype="bfloat16",
-        max_model_len=1000000,
+        max_model_len=2000000,
     )
     print("Model loaded successfully with vLLM")
 

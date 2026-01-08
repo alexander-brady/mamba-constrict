@@ -173,7 +173,7 @@ def main():
         model=args.model,
         trust_remote_code=True,  # Required for Mamba models
         dtype="bfloat16",
-        max_model_len=1000000,  # Set high limit for Mamba models (they support long contexts)
+        max_model_len=2000000,  # Set high limit for Mamba models (they support long contexts)
     )
     logger.info(f"[{model_name}] Model loaded successfully with vLLM")
 

@@ -62,7 +62,7 @@ def main(
         model=model_path,
         trust_remote_code=True,
         dtype="bfloat16",
-        max_model_len=1000000,
+        max_model_len=2000000,
     )
     print("Model loaded successfully with vLLM")
 
