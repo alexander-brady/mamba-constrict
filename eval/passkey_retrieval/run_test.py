@@ -140,6 +140,7 @@ def run_passkey_test(args):
                 # Store result
                 result = {
                     "test_id": i,
+                    "target_tokens": target_tokens,
                     "str_length": str_length,
                     "expected_passkey": expected_passkey,
                     "predicted_passkey": predicted_passkey,

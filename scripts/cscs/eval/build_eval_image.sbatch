@@ -3,7 +3,7 @@
 #SBATCH --output=logs/eval_docker_build_%j.out
 #SBATCH --error=logs/eval_docker_build_%j.err
 #SBATCH --time=01:00:00
-#SBATCH --account=large-sc-2
+#SBATCH --account=a163
 
 set -eu
 

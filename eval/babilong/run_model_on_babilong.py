@@ -97,7 +97,9 @@ def main(
                 f"{results_folder}/{model_name}/{task}_{split_name}_{prompt_name}.csv"
             )
             outfile.parent.mkdir(parents=True, exist_ok=True)
-            cfg_file = f"./{results_folder}/{model_name}/{task}_{split_name}_{prompt_name}.json"
+            cfg_file = Path(
+                f"{results_folder}/{model_name}/{task}_{split_name}_{prompt_name}.json"
+            )
             json.dump(
                 {"prompt": prompt_cfg},
                 open(cfg_file, "w"),
