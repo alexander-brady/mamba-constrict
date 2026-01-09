@@ -1,52 +1,45 @@
 #!/bin/bash
 #SBATCH --account=a163
+#SBATCH --job-name=perplexity
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --time=12:00:00
-#SBATCH --job-name=perplexity-eval
-#SBATCH --output=logs/%x-%j.out
-#SBATCH --error=logs/%x-%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+#SBATCH --mem=320G
 #SBATCH --environment=finetune_old
-#SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
+#SBATCH --no-requeue
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
-echo "Starting Perplexity evaluation at $(date)"
+set -euo pipefail
+mkdir -p logs
+
+MODEL_PATH="$1"
+MODEL_NAME="$(basename "${MODEL_PATH}")"
+
+echo "Starting Perplexity evaluation of ${MODEL_NAME} at $(date)"
+echo "MODEL_PATH=${MODEL_PATH}"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
-cd /iopsstor/scratch/cscs/teilers/finetune
-PROJECT_DIR=$(pwd)
-
-# pip install transformers accelerate
-
-# Create results directory
-RESULTS_DIR="$PROJECT_DIR/results/perplexity"
+RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
 mkdir -p "$RESULTS_DIR"
 
-# Print pytorch version and device
 python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'Device: {torch.cuda.get_device_name(0)}')"
 
-# Get list of models using model_utils
-MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
+pushd eval/pg19 > /dev/null
+python3 run_perplexity.py \
+    --model "$MODEL_PATH" \
+    --data_dir "${PROJECT_DIR}/data/pg19/test" \
+    --save_dir "$RESULTS_DIR" \
+    --context_lengths 2048 4096 8192 16384 32768 65536 131072 \
+    --wandb_project "eval-mamba" \
+    --wandb_entity "mamba-monks" \
+    --wandb_name "${MODEL_NAME}"
 
-for MODEL_NAME in $MODEL_NAMES; do
-    MODEL_PATH=$(python3 -c "import sys; sys.path.insert(0, 'eval'); from model_utils import get_all_models; print(get_all_models()['$MODEL_NAME'])")
+python3 plot_results.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
+popd > /dev/null
 
-    echo "----------------------------------------------------------------"
-    echo "Processing Model: $MODEL_NAME"
-    echo "Model Path: $MODEL_PATH"
-    echo "----------------------------------------------------------------"
-
-    # Run inference with local model
-    pushd eval/pg19 > /dev/null
-    python3 run_perplexity.py --model "$MODEL_PATH" --data_dir "$PROJECT_DIR/data/pg19/test" --save_dir "$RESULTS_DIR" --context_lengths 2048 4096 8192 16384 32768 65536 131072 262144
-    
-    # Plot results
-    python3 plot_results.py --results_dir "$RESULTS_DIR"
-    popd > /dev/null
-done
-
-echo "Finished Passkey evaluation at $(date)"
+echo "Finished Perplexity evaluation at $(date)"

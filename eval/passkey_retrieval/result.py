@@ -4,49 +4,37 @@ import os
 from collections import defaultdict
 
 
-def analyze_results(results_dir):
-    """Analyze passkey retrieval results and aggregate by model."""
-    results_by_model = {}
+def analyze_model_results(filepath):
+    """Analyze passkey retrieval results for a single model."""
+    if not os.path.exists(filepath):
+        return None
 
-    # Process all result files
-    for filename in os.listdir(results_dir):
-        if not filename.endswith(".jsonl"):
-            continue
+    results = []
+    with open(filepath, encoding="utf-8") as f:
+        for line in f:
+            results.append(json.loads(line))
 
-        filepath = os.path.join(results_dir, filename)
-        model_name = filename.replace(".jsonl", "")
+    if not results:
+        return None
 
-        # Read results
-        results = []
-        with open(filepath, encoding="utf-8") as f:
-            for line in f:
-                results.append(json.loads(line))
+    # Aggregate by token length
+    stats_by_length = defaultdict(lambda: {"total": 0, "correct": 0})
 
-        # Aggregate by token length
-        stats_by_length = defaultdict(
-            lambda: {"total": 0, "correct": 0}
+    for result in results:
+        target_tokens = result["target_tokens"]
+        stats_by_length[target_tokens]["total"] += 1
+        if result["is_correct"]:
+            stats_by_length[target_tokens]["correct"] += 1
+
+    # Calculate accuracy for each length
+    accuracies = {}
+    for target_tokens in stats_by_length:
+        stats = stats_by_length[target_tokens]
+        accuracies[target_tokens] = (
+            (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
         )
 
-        for result in results:
-            target_tokens = result["target_tokens"]
-            stats_by_length[target_tokens]["total"] += 1
-            if result["is_correct"]:
-                stats_by_length[target_tokens]["correct"] += 1
-
-        # Calculate accuracy and average tokens for each length
-        accuracies = {}
-        for target_tokens in stats_by_length:
-            stats = stats_by_length[target_tokens]
-            accuracies[target_tokens] = (
-                (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
-            )
-
-        results_by_model[model_name] = {
-            "stats": stats_by_length,
-            "accuracies": accuracies,
-        }
-
-    return results_by_model
+    return {"stats": dict(stats_by_length), "accuracies": accuracies}
 
 
 def main():
@@ -59,18 +47,27 @@ def main():
         default="results",
         help="Directory containing result files",
     )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default=None,
+        help="Model name to analyze (if not provided, analyzes all models)",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.results_dir):
         print(f"Error: Results directory '{args.results_dir}' does not exist.")
         return
 
-    # Analyze results
-    results_by_model = analyze_results(args.results_dir)
+    # Analyze results - look for passkey.jsonl in results_dir
+    filepath = os.path.join(args.results_dir, "passkey.jsonl")
+    model_name = args.model_name or os.path.basename(args.results_dir)
 
-    if not results_by_model:
-        print(f"No result files found in '{args.results_dir}'")
+    model_data = analyze_model_results(filepath)
+    if not model_data:
+        print(f"No results found in '{filepath}'")
         return
+    results_by_model = {model_name: model_data}
 
     # Get all unique token lengths across all models and sort them
     all_lengths = set()
@@ -116,7 +113,7 @@ def main():
     print("=" * 100 + "\n")
 
     # Save to file
-    result_file = os.path.join(args.results_dir, "result.txt")
+    result_file = os.path.join(args.results_dir, "passkey.txt")
     with open(result_file, "w", encoding="utf-8") as f:
         f.write("\n".join(output_lines))
 

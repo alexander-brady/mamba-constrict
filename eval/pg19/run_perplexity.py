@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 import torch
+import wandb
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -136,10 +137,36 @@ def main():
         default=None,
         help="Limit number of documents to process",
     )
+    parser.add_argument(
+        "--wandb_project", type=str, default=None, help="Weights & Biases project name"
+    )
+    parser.add_argument(
+        "--wandb_entity", type=str, default=None, help="Weights & Biases entity name"
+    )
+    parser.add_argument(
+        "--wandb_name", type=str, default=None, help="Weights & Biases run name"
+    )
     args = parser.parse_args()
 
     # Setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model_display_name = os.path.basename(args.model)
+
+    # Initialize wandb
+    use_wandb = args.wandb_project is not None
+    if use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            name=args.wandb_name or model_display_name,
+            config={
+                "model": args.model,
+                "context_lengths": args.context_lengths,
+                "stride": args.stride,
+                "max_documents": args.max_documents,
+            },
+            job_type="perplexity",
+        )
 
     print(f"Model: {args.model}")
     print(f"Device: {device}")
@@ -178,7 +205,7 @@ def main():
 
     # Prepare output
     os.makedirs(args.save_dir, exist_ok=True)
-    out_file = os.path.join(args.save_dir, f"{args.model.replace('/', '_')}.jsonl")
+    out_file = os.path.join(args.save_dir, "perplexity.jsonl")
 
     # Load existing results
     existing = {}
@@ -213,9 +240,20 @@ def main():
             print(f"Tokens: {result['total_tokens']:,}")
             print(f"Documents: {result['num_documents']}")
 
+            # Log to wandb
+            if use_wandb:
+                wandb.log({
+                    f"perplexity/{ctx_len}/ppl": result["perplexity"],
+                    f"perplexity/{ctx_len}/tokens": result["total_tokens"],
+                })
+
             results.append(result)
             f.write(json.dumps(result) + "\n")
             f.flush()
+
+    # Finish wandb
+    if use_wandb:
+        wandb.finish()
 
     # Summary
     print(f"\n{'=' * 60}")

@@ -12,24 +12,35 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def load_results(results_dir):
-    """Load all result files from the results directory."""
+def load_model_results(filepath):
+    """Load results for a single model."""
+    if not os.path.exists(filepath):
+        return None
+
+    results = []
+    with open(filepath, encoding="utf-8") as f:
+        for line in f:
+            results.append(json.loads(line))
+
+    if not results:
+        return None
+
+    # Sort by context length
+    results.sort(key=lambda x: x["context_length"])
+    return results
+
+
+def load_results(results_dir, model_name=None):
+    """Load result files from the results directory."""
     results_by_model = {}
 
-    for filename in os.listdir(results_dir):
-        if not filename.endswith(".jsonl"):
-            continue
+    # Look for perplexity.jsonl in results_dir
+    filepath = os.path.join(results_dir, "perplexity.jsonl")
+    if not model_name:
+        model_name = os.path.basename(results_dir)
 
-        filepath = os.path.join(results_dir, filename)
-        model_name = filename.replace(".jsonl", "").replace("_", "/")
-
-        results = []
-        with open(filepath, encoding="utf-8") as f:
-            for line in f:
-                results.append(json.loads(line))
-
-        # Sort by context length
-        results.sort(key=lambda x: x["context_length"])
+    results = load_model_results(filepath)
+    if results:
         results_by_model[model_name] = results
 
     return results_by_model
@@ -224,6 +235,13 @@ def main():
         default="PG19",
         help="Title prefix for plots",
     )
+    parser.add_argument(
+        "--model_name",
+        "-m",
+        type=str,
+        default=None,
+        help="Model name to analyze (if not provided, analyzes all models)",
+    )
 
     args = parser.parse_args()
 
@@ -233,29 +251,24 @@ def main():
 
     # Load results
     print("Loading results...")
-    results_by_model = load_results(args.results_dir)
+    results_by_model = load_results(args.results_dir, args.model_name)
 
     if not results_by_model:
-        print(f"No result files found in '{args.results_dir}'")
+        if args.model_name:
+            print(f"No results found for model '{args.model_name}'")
+        else:
+            print(f"No result files found in '{args.results_dir}'")
         return
 
     print(f"Found results for {len(results_by_model)} model(s)")
 
     # Create plots for each model
     for model_name, results in results_by_model.items():
-        model_safe_name = model_name.replace("/", "_")
-        output_path = os.path.join(output_dir, f"{model_safe_name}_perplexity.png")
+        output_path = os.path.join(output_dir, "perplexity.png")
         plot_single_model(model_name, results, output_path, title_prefix=args.title)
 
-    # Create comparison plot if multiple models
-    if len(results_by_model) > 1:
-        output_path = os.path.join(output_dir, "perplexity_comparison.png")
-        plot_multiple_models(
-            results_by_model, output_path, title=f"{args.title} Perplexity Comparison"
-        )
-
     # Create summary table
-    summary_path = os.path.join(output_dir, "summary.txt")
+    summary_path = os.path.join(output_dir, "perplexity.txt")
     create_summary_table(results_by_model, summary_path)
 
     print("\n" + "=" * 80)

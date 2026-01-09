@@ -20,6 +20,7 @@ import json
 import os
 import re
 
+import wandb
 from passkey_utils import generate_prompt_random_depth
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
@@ -73,8 +74,24 @@ def extract_passkey(response):
 def run_passkey_test(args):
     """Run passkey retrieval test."""
     model_name = args.model
+    model_display_name = os.path.basename(model_name)
     token_lengths = args.token_lengths
     num_tests = args.num_tests
+
+    # Initialize wandb
+    use_wandb = args.wandb_project is not None
+    if use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            name=args.wandb_name or model_display_name,
+            config={
+                "model": model_name,
+                "token_lengths": token_lengths,
+                "num_tests": num_tests,
+            },
+            job_type="passkey",
+        )
 
     # Load model with vLLM
     print(f"Loading model from: {model_name}")
@@ -89,7 +106,7 @@ def run_passkey_test(args):
 
     # Prepare output directory and file
     os.makedirs(args.save_dir, exist_ok=True)
-    out_file = os.path.join(args.save_dir, f"{model_name.replace('/', '_')}.jsonl")
+    out_file = os.path.join(args.save_dir, "passkey.jsonl")
 
     # Load existing results if any
     has_data = {}
@@ -153,6 +170,21 @@ def run_passkey_test(args):
                 fout.write(json.dumps(result, ensure_ascii=False) + "\n")
                 fout.flush()
 
+            # Log accuracy per token length to wandb
+            if use_wandb:
+                length_results = [r for r in results if r["target_tokens"] == target_tokens]
+                accuracy = sum(r["is_correct"] for r in length_results) / len(length_results)
+                wandb.log({
+                    f"passkey/{target_tokens}/accuracy": accuracy,
+                    f"passkey/{target_tokens}/total": len(length_results),
+                })
+
+    # Log overall accuracy and finish wandb
+    if use_wandb:
+        overall_accuracy = sum(r["is_correct"] for r in results) / len(results)
+        wandb.log({"passkey/overall_accuracy": overall_accuracy})
+        wandb.finish()
+
     return results, out_file
 
 
@@ -188,6 +220,15 @@ def main():
         type=int,
         default=50,
         help="Number of tests per token length",
+    )
+    parser.add_argument(
+        "--wandb_project", type=str, default=None, help="Weights & Biases project name"
+    )
+    parser.add_argument(
+        "--wandb_entity", type=str, default=None, help="Weights & Biases entity name"
+    )
+    parser.add_argument(
+        "--wandb_name", type=str, default=None, help="Weights & Biases run name"
     )
     args = parser.parse_args()
 

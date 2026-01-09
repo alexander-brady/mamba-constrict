@@ -1,53 +1,50 @@
 #!/bin/bash
 #SBATCH --account=a163
+#SBATCH --job-name=babilong
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --time=12:00:00
-#SBATCH --job-name=babilong-eval
-#SBATCH --output=logs/%x-%j.out
-#SBATCH --error=logs/%x-%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+#SBATCH --mem=320G
 #SBATCH --environment=eval
-#SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
+#SBATCH --no-requeue
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
-echo "Starting BABILong evaluation at $(date)"
+set -euo pipefail
+mkdir -p logs
+
+MODEL_PATH="$1"
+MODEL_NAME="$(basename "${MODEL_PATH}")"
+
+echo "Starting BABILong evaluation of ${MODEL_NAME} at $(date)"
+echo "MODEL_PATH=${MODEL_PATH}"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
-# Create results directory
-RESULTS_DIR="$PROJECT_DIR/results/babilong"
+RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
 mkdir -p "$RESULTS_DIR"
 
-# Print pytorch version and device
 python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'Device: {torch.cuda.get_device_name(0)}')"
 
-# Get list of models using model_utils
-MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
+pushd eval/babilong > /dev/null
+python3 run_model_on_babilong.py \
+    --results_folder "$RESULTS_DIR" \
+    --dataset_name "RMT-team/babilong" \
+    --model_name "$MODEL_NAME" \
+    --model_path "$MODEL_PATH" \
+    --tasks qa1 qa2 qa3 qa4 qa5 qa6 qa7 qa8 qa9 qa10 \
+    --lengths 2k 4k 8k 16k 32k 64k 128k 256k 512k 1M \
+    --use_instruction \
+    --use_examples \
+    --use_post_prompt \
+    --wandb_project "eval-mamba" \
+    --wandb_entity "mamba-monks" \
+    --wandb_name "${MODEL_NAME}"
 
-for MODEL_NAME in $MODEL_NAMES; do
-    MODEL_PATH=$(python3 -c "import sys; sys.path.insert(0, 'eval'); from model_utils import get_all_models; print(get_all_models()['$MODEL_NAME'])")
-
-    echo "----------------------------------------------------------------"
-    echo "Processing Model: $MODEL_NAME"
-    echo "Model Path: $MODEL_PATH"
-    echo "----------------------------------------------------------------"
-
-    # Run inference with local model
-    pushd eval/babilong > /dev/null
-    python3 run_model_on_babilong.py \
-        --results_folder "$RESULTS_DIR" \
-        --dataset_name "RMT-team/babilong" \
-        --model_name "$MODEL_NAME" \
-        --model_path "$MODEL_PATH" \
-        --tasks qa1 qa2 qa3 qa4 qa5 qa6 qa7 qa8 qa9 qa10\
-        --lengths 2k 4k 8k 16k 32k 64k 128k 256k 512k 1M\
-        --use_instruction \
-        --use_examples \
-        --use_post_prompt
-    popd > /dev/null
-done
+python3 result.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
+popd > /dev/null
 
 echo "Finished BABILong evaluation at $(date)"

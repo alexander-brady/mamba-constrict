@@ -1,25 +1,35 @@
 #!/bin/bash
-#SBATCH --account=large-sc-2
-#SBATCH --time=12:00:00
+#SBATCH --account=a163
 #SBATCH --job-name=lm-eval
-#SBATCH --output=logs/%x-%j.out
-#SBATCH --error=logs/%x-%j.err
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=320G
 #SBATCH --environment=eval
-#SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
+#SBATCH --no-requeue
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
+set -euo pipefail
+mkdir -p logs
 
-MODEL_PATH="state-spaces/mamba-2.8b-hf"
-MODEL_NAME="${MODEL_PATH##*/}"
+MODEL_PATH="$1"
+MODEL_NAME="$(basename "${MODEL_PATH}")"
 
-echo "Starting LM-eval of $MODEL_NAME at $(date)"
+echo "Starting LM-eval of ${MODEL_NAME} at $(date)"
+echo "MODEL_PATH=${MODEL_PATH}"
 
-MODEL_ARGS="pretrained=${MODEL_PATH} tokenizer=state-spaces/mamba-2.8b-hf tensor_parallel_size=4 dtype=bfloat16 trust_remote_code=True max_model_len=32768 "
-lm-eval run --config ${PROJECT_DIR}/eval/lm-eval.yaml --model_args ${MODEL_ARGS} --output_path ${PROJECT_DIR}/results/lm-eval/${MODEL_NAME}
+MODEL_ARGS="pretrained=${MODEL_PATH},tokenizer=state-spaces/mamba-2.8b-hf,tensor_parallel_size=4,dtype=bfloat16,trust_remote_code=True,max_model_len=32768"
+WANDB_ARGS="project=eval-mamba,entity=mamba-monks,name=${MODEL_NAME},dir=${PROJECT_DIR}/outputs/lm-eval/"
+
+lm-eval run \
+    --config "${PROJECT_DIR}/eval/lm-eval.yaml" \
+    --model_args "${MODEL_ARGS}" \
+    --output_path "${PROJECT_DIR}/results/${MODEL_NAME}/lm-eval" \
+    --wandb_args "${WANDB_ARGS}" \
+    --tasks lambada_openai_cloze_yaml,hellaswag,piqa,arc_easy,arc_challenge,winogrande,openbookqa,longbench
 
 echo "Finished LM-eval evaluation at $(date)"

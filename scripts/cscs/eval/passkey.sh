@@ -1,47 +1,44 @@
 #!/bin/bash
 #SBATCH --account=a163
+#SBATCH --job-name=passkey
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --time=12:00:00
-#SBATCH --job-name=passkey-eval
-#SBATCH --output=logs/%x-%j.out
-#SBATCH --error=logs/%x-%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+#SBATCH --mem=320G
 #SBATCH --environment=eval
-#SBATCH --no-requeue # Prevent Slurm to requeue the job if the execution crashes (e.g. node failure) so we don't loose the logs.
+#SBATCH --no-requeue
 #SBATCH -C thp_never&nvidia_vboost_enabled
 
-echo "Starting Passkey evaluation at $(date)"
+set -euo pipefail
+mkdir -p logs
+
+MODEL_PATH="$1"
+MODEL_NAME="$(basename "${MODEL_PATH}")"
+
+echo "Starting Passkey evaluation of ${MODEL_NAME} at $(date)"
+echo "MODEL_PATH=${MODEL_PATH}"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
-# Create results directory
-RESULTS_DIR="$PROJECT_DIR/results/passkey"
+RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
 mkdir -p "$RESULTS_DIR"
 
-# Print pytorch version and device
-python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'Device: {torch.cuda.get_device_name(0)}')"
 
-# Get list of models using model_utils
-MODEL_NAMES=$(python3 -c 'import sys; sys.path.insert(0, "eval"); from model_utils import get_all_models; print(" ".join(get_all_models().keys()))')
+pushd eval/passkey_retrieval > /dev/null
+python3 run_test.py \
+    --model "$MODEL_PATH" \
+    --save_dir "$RESULTS_DIR" \
+    --token_lengths 2048 4096 8192 16384 32768 65536 131072 262144 \
+    --num_tests 50 \
+    --wandb_project "eval-mamba" \
+    --wandb_entity "mamba-monks" \
+    --wandb_name "${MODEL_NAME}"
 
-for MODEL_NAME in $MODEL_NAMES; do
-    MODEL_PATH=$(python3 -c "import sys; sys.path.insert(0, 'eval'); from model_utils import get_all_models; print(get_all_models()['$MODEL_NAME'])")
-
-    echo "----------------------------------------------------------------"
-    echo "Processing Model: $MODEL_NAME"
-    echo "Model Path: $MODEL_PATH"
-    echo "----------------------------------------------------------------"
-
-    # Run inference with local model
-    pushd eval/passkey_retrieval > /dev/null
-    python3 run_test.py --model "$MODEL_PATH" --save_dir "$RESULTS_DIR" --token_lengths 2048 4096 8192 16384 32768 65536 131072 262144 --num_tests 50
-
-    # Export results
-    python3 result.py --results_dir "$RESULTS_DIR"
-    popd > /dev/null
-done
+python3 result.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
+popd > /dev/null
 
 echo "Finished Passkey evaluation at $(date)"

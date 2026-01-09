@@ -6,6 +6,7 @@ from pathlib import Path
 
 import datasets
 import pandas as pd
+import wandb
 from prompts import DEFAULT_PROMPTS, DEFAULT_TEMPLATE, get_formatted_input
 from tqdm.auto import tqdm
 from vllm import LLM, SamplingParams
@@ -38,6 +39,9 @@ def main(
     use_instruction: bool,
     use_examples: bool,
     use_post_prompt: bool,
+    wandb_project: str | None = None,
+    wandb_entity: str | None = None,
+    wandb_name: str | None = None,
 ) -> None:
     """
     Main function to get model predictions on babilong and save them using vLLM.
@@ -52,9 +56,32 @@ def main(
         use_instruction (bool): Flag to use instruction in prompt.
         use_examples (bool): Flag to use examples in prompt.
         use_post_prompt (bool): Flag to use post_prompt text in prompt.
+        wandb_project (str): Weights & Biases project name.
+        wandb_entity (str): Weights & Biases entity name.
+        wandb_name (str): Weights & Biases run name.
     """
     if model_path is None:
         model_path = model_name
+
+    # Initialize wandb
+    use_wandb = wandb_project is not None
+    if use_wandb:
+        wandb.init(
+            project=wandb_project,
+            entity=wandb_entity,
+            name=wandb_name or model_name,
+            config={
+                "model_name": model_name,
+                "model_path": model_path,
+                "tasks": tasks,
+                "lengths": split_names,
+                "dataset_name": dataset_name,
+                "use_instruction": use_instruction,
+                "use_examples": use_examples,
+                "use_post_prompt": use_post_prompt,
+            },
+            job_type="babilong",
+        )
 
     # Load model with vLLM
     print(f"Loading model with vLLM: {model_path}")
@@ -94,11 +121,11 @@ def main(
 
             # Prepare files with predictions, prompt, and generation configurations
             outfile = Path(
-                f"{results_folder}/{model_name}/{task}_{split_name}_{prompt_name}.csv"
+                f"{results_folder}/babilong/{task}_{split_name}_{prompt_name}.csv"
             )
             outfile.parent.mkdir(parents=True, exist_ok=True)
             cfg_file = Path(
-                f"{results_folder}/{model_name}/{task}_{split_name}_{prompt_name}.json"
+                f"{results_folder}/babilong/{task}_{split_name}_{prompt_name}.json"
             )
             json.dump(
                 {"prompt": prompt_cfg},
@@ -130,6 +157,21 @@ def main(
                 df.loc[len(df)] = [target, output, question]
                 # write results to csv file
                 df.to_csv(outfile)
+
+            # Calculate accuracy for this task/length
+            # Check if target word appears in the output (case-insensitive)
+            accuracy = df.apply(
+                lambda row: row["target"].lower() in row["output"].lower(), axis=1
+            ).mean()
+            if use_wandb:
+                wandb.log({
+                    f"babilong/{task}/{split_name}/accuracy": accuracy,
+                    f"babilong/{task}/{split_name}/total": len(df),
+                })
+
+    # Finish wandb run
+    if use_wandb:
+        wandb.finish()
 
 
 if __name__ == "__main__":
@@ -177,6 +219,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_post_prompt", action="store_true", help="Use post prompt text in prompt"
     )
+    parser.add_argument(
+        "--wandb_project", type=str, default=None, help="Weights & Biases project name"
+    )
+    parser.add_argument(
+        "--wandb_entity", type=str, default=None, help="Weights & Biases entity name"
+    )
+    parser.add_argument(
+        "--wandb_name", type=str, default=None, help="Weights & Biases run name"
+    )
 
     args = parser.parse_args()
 
@@ -192,4 +243,7 @@ if __name__ == "__main__":
         args.use_instruction,
         args.use_examples,
         args.use_post_prompt,
+        args.wandb_project,
+        args.wandb_entity,
+        args.wandb_name,
     )
