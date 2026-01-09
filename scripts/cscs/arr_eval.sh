@@ -30,6 +30,6 @@ lm-eval run \
     --model_args "${MODEL_ARGS}" \
     --output_path "${PROJECT_DIR}/results/lm-eval/${MODEL_NAME}" \
     --wandb_args "${WANDB_ARGS}" \
-    --tasks lambada_openai,hellaswag,piqa,arc_easy,arc_challenge,winogrande,openbookqa
+    --tasks lambada_openai_cloze_yaml,hellaswag,piqa,arc_easy,arc_challenge,winogrande,openbookqa
 
 echo "Finished LM-eval evaluation at $(date)"
