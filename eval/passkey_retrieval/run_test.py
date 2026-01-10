@@ -33,7 +33,8 @@ def calc_str_length(token_length, letters_per_token=3.65):
 
 def generate_prompt(n_garbage, seed=None):
     """Generates a text file and inserts an execute line at a random position."""
-    return generate_prompt_random_depth(n_garbage, seed)
+    prompt, passkey, depth = generate_prompt_random_depth(n_garbage, seed)
+    return prompt, passkey, depth
 
 
 def query_llm(
@@ -137,7 +138,7 @@ def run_passkey_test(args):
                     continue
 
                 # Generate prompt and get expected passkey
-                prompt_text, expected_passkey = generate_prompt(str_length, seed=i)
+                prompt_text, expected_passkey, depth = generate_prompt(str_length, seed=i)
 
 
                 # Query the model
@@ -158,7 +159,7 @@ def run_passkey_test(args):
                 result = {
                     "test_id": i,
                     "target_tokens": target_tokens,
-                    "str_length": str_length,
+                    "depth": depth,
                     "expected_passkey": expected_passkey,
                     "predicted_passkey": predicted_passkey,
                     "response": response,

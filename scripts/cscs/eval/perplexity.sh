@@ -42,7 +42,7 @@ python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(
 pushd eval/pg19 > /dev/null
 python3 run_perplexity.py \
     --model "$MODEL_PATH" \
-    --data_dir "${PROJECT_DIR}/data/pg19/test" \
+    --data_dir "${PROJECT_DIR}/data/pg19/test_128k" \
     --save_dir "$RESULTS_DIR" \
     --context_lengths 2048 4096 8192 16384 32768 65536 131072 \
     --wandb_project "eval-mamba" \

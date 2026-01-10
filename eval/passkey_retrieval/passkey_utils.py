@@ -76,7 +76,7 @@ def generate_prompt_with_depth(
 
 def generate_prompt_random_depth(
     n_garbage: int, seed: int | None = None
-) -> tuple[str, int]:
+) -> tuple[str, int, float]:
     """
     Generate a passkey prompt with random depth.
 
@@ -85,7 +85,7 @@ def generate_prompt_random_depth(
         seed: Random seed for reproducibility
 
     Returns:
-        Tuple of (prompt_text, passkey)
+        Tuple of (prompt_text, passkey, depth)
     """
     if seed is not None:
         random.seed(seed)
@@ -93,4 +93,5 @@ def generate_prompt_random_depth(
     # Random depth
     depth = random.random()
 
-    return generate_prompt_with_depth(n_garbage, depth, seed=None)
+    prompt, passkey = generate_prompt_with_depth(n_garbage, depth, seed=None)
+    return prompt, passkey, depth
