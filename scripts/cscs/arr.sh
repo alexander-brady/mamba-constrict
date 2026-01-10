@@ -13,12 +13,15 @@
 set -euo pipefail
 mkdir -p logs
 
+# If EVAL_ONLY is set to true, only run evaluation on trained models
+export EVAL_ONLY=${EVAL_ONLY:-false}
+
 MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
 
 # ---- BASELINE: eval only ----
 if [ ${SLURM_ARRAY_TASK_ID} -eq 25 ]; then
-    sbatch scripts/cscs/arr_eval.sh "${BASE_MODEL}"
+    sbatch scripts/cscs/arr_eval.sh "${BASE_MODEL}" "true"
     exit 0
 fi
 
@@ -40,6 +43,13 @@ RUN_ID="mamba-${MODEL_SIZE}_${CRITERION}_w${LAMBDA}"
 
 echo "Submitting jobs for ${RUN_ID} at $(date)"
 
+# ---- Check if only evaluation is requested ----
+if [ "${EVAL_ONLY}" = "true" ]; then
+    sbatch scripts/cscs/arr_eval.sh "${RUN_ID}"
+    echo "Submitted EVAL only for ${RUN_ID}"
+    exit 0
+fi
+
 # ---- Submit training job ----
 TRAIN_JOBID=$(sbatch --parsable \
     scripts/cscs/arr_train.sh \
@@ -48,6 +58,6 @@ TRAIN_JOBID=$(sbatch --parsable \
 # ---- Submit evaluation job dependent on training ----
 sbatch \
     --dependency=afterok:${TRAIN_JOBID} \
-    scripts/cscs/arr_eval.sh "models/${RUN_ID}"
+    scripts/cscs/arr_eval.sh "${RUN_ID}"
 
 echo "Submitted TRAIN=${TRAIN_JOBID} → EVAL (afterok)"

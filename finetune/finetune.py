@@ -68,16 +68,9 @@ def finetune(cfg: DictConfig):
     # Fine-tuning
     trainer.fit(fine_tuner, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
-    # Build save path: models/model_name_criterion[_w<lambda>]_dataset[_task]
-    # model_name = cfg.model.name.split("/")[-1]
-    # dataset_name = cfg.data.name.split("/")[-1]
-    # criterion_name = cfg.loss._target_.split(".")[-1].lower()
-    # if cfg.loss.get("weight", None) is not None:
-    #     criterion_name += f"_w{cfg.loss.weight}"
-    # save_path = f"{cfg.model_dir}/{model_name}_{criterion_name}_{dataset_name}"
-    # if cfg.data.get("use_babilong", False) and cfg.data.get("task"):
-    #     save_path += f"_{cfg.data.task}"
-    save_path = f"{cfg.model_dir}/{cfg.run_id}"
+    # Build save path: models/<task>/<run_id>
+    task = "base" if cfg.data.name == "monology/pile-uncopyrighted" else cfg.data.name
+    save_path = f"{cfg.model_dir}/{task}/{cfg.run_id}"
 
     # Save the fine-tuned model
     model.save_pretrained(save_path)

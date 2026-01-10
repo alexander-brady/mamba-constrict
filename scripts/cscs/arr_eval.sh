@@ -11,26 +11,30 @@
 set -euo pipefail
 mkdir -p logs
 
-MODEL_PATH="$1"
-MODEL_NAME="$(basename "${MODEL_PATH}")"
+MODEL_NAME="$1"
+
+# SET to "hf" if second argument is true, else "base"
+VERSION="base"
+if [ "${2:-false}" = "true" ]; then
+    VERSION="hf"
+fi
 
 echo "Starting evaluation pipeline for ${MODEL_NAME} at $(date)"
-echo "MODEL_PATH=${MODEL_PATH}"
 
 # Submit lm-eval job
-LM_EVAL_JOBID=$(sbatch --parsable scripts/cscs/eval/lm_eval.sh "${MODEL_PATH}")
+LM_EVAL_JOBID=$(sbatch --parsable scripts/cscs/eval/lm_eval.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted lm-eval job: ${LM_EVAL_JOBID}"
 
 # Submit babilong job
-BABILONG_JOBID=$(sbatch --parsable scripts/cscs/eval/babilong.sh "${MODEL_PATH}")
+BABILONG_JOBID=$(sbatch --parsable scripts/cscs/eval/babilong.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted babilong job: ${BABILONG_JOBID}"
 
 # Submit passkey job
-PASSKEY_JOBID=$(sbatch --parsable scripts/cscs/eval/passkey.sh "${MODEL_PATH}")
+PASSKEY_JOBID=$(sbatch --parsable scripts/cscs/eval/passkey.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted passkey job: ${PASSKEY_JOBID}"
 
 # Submit perplexity job
-PERPLEXITY_JOBID=$(sbatch --parsable scripts/cscs/eval/perplexity.sh "${MODEL_PATH}")
+PERPLEXITY_JOBID=$(sbatch --parsable scripts/cscs/eval/perplexity.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted perplexity job: ${PERPLEXITY_JOBID}"
 
 echo "All evaluation jobs submitted at $(date)"
