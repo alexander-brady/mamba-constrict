@@ -1,4 +1,3 @@
-# @package trainer
 deterministic: true
 accelerator: auto
 gradient_clip_val: 1.0

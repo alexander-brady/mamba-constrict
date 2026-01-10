@@ -25,13 +25,26 @@ echo "Starting evaluation pipeline for ${MODEL_NAME} at $(date)"
 LM_EVAL_JOBID=$(sbatch --parsable scripts/cscs/eval/lm_eval.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted lm-eval job: ${LM_EVAL_JOBID}"
 
-# Submit babilong job
+# Submit babilong job (zero-shot)
 BABILONG_JOBID=$(sbatch --parsable scripts/cscs/eval/babilong.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted babilong job: ${BABILONG_JOBID}"
 
-# Submit passkey job
+# Submit babilong job (finetuned)
+FINETUNE_BABILONG_JOBID=$(sbatch --parsable scripts/cscs/eval/finetune.sh "${MODEL_NAME}" "babilong" "${VERSION}")
+FINETUNED_BABILONG_JOBID=$(sbatch --parsable --dependency=afterok:${FINETUNE_BABILONG_JOBID} \
+    scripts/cscs/eval/babilong.sh "${MODEL_NAME}" "ft")
+echo "Submitted finetuned babilong job: ${FINETUNED_BABILONG_JOBID}, dependent on finetune job: ${FINETUNE_BABILONG_JOBID}"
+
+
+# Submit passkey job (zero-shot)
 PASSKEY_JOBID=$(sbatch --parsable scripts/cscs/eval/passkey.sh "${MODEL_NAME}" "${VERSION}")
 echo "Submitted passkey job: ${PASSKEY_JOBID}"
+
+# Submit passkey job (finetuned)
+FINETUNE_PASSKEY_JOBID=$(sbatch --parsable scripts/cscs/eval/finetune.sh "${MODEL_NAME}" "passkey" "${VERSION}")
+FINETUNED_PASSKEY_JOBID=$(sbatch --parsable --dependency=afterok:${FINETUNE_PASSKEY_JOBID} \
+    scripts/cscs/eval/passkey.sh "${MODEL_NAME}" "ft")
+echo "Submitted finetuned passkey job: ${FINETUNED_PASSKEY_JOBID}, dependent on finetune job: ${FINETUNE_PASSKEY_JOBID}"
 
 # Submit perplexity job
 PERPLEXITY_JOBID=$(sbatch --parsable scripts/cscs/eval/perplexity.sh "${MODEL_NAME}" "${VERSION}")
@@ -39,6 +52,6 @@ echo "Submitted perplexity job: ${PERPLEXITY_JOBID}"
 
 echo "All evaluation jobs submitted at $(date)"
 echo "  lm-eval:    ${LM_EVAL_JOBID}"
-echo "  babilong:   ${BABILONG_JOBID}"
-echo "  passkey:    ${PASSKEY_JOBID}"
+echo "  babilong:   ${BABILONG_JOBID} (finetuned: ${FINETUNED_BABILONG_JOBID})"
+echo "  passkey:    ${PASSKEY_JOBID} (finetuned: ${FINETUNED_PASSKEY_JOBID})"
 echo "  perplexity: ${PERPLEXITY_JOBID}"
