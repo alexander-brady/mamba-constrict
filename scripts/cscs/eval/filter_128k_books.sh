@@ -1,12 +1,26 @@
 #!/bin/bash
+#SBATCH --account=a163
+#SBATCH --job-name=pg19_filter
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
+#SBATCH --time=01:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=320G
+#SBATCH --environment=finetune_old
+#SBATCH --no-requeue
+#SBATCH -C thp_never&nvidia_vboost_enabled
 # Filter PG19 books that have at least 128k tokens
 # Uses the same tokenizer setup as run_perplexity.py
 
 set -euo pipefail
 
 # Default values
-MODEL="${MODEL:-meta-llama/Llama-3.2-1B}"
-DATA_DIR="${1:-${SCRATCH:-/tmp}/finetune/data/pg19/test}"
+MODEL_SIZE=2.8b
+MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
+DATA_DIR="${1:-./data/pg19/test}"
 OUTPUT_DIR="${2:-${DATA_DIR}_128k}"
 MIN_TOKENS="${3:-131072}"  # 128k = 131072 tokens
 
