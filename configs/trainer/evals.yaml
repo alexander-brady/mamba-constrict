@@ -1,0 +1,6 @@
+defaults:
+    - trainer/default
+    
+max_epochs: 1
+max_steps: -1
+limit_val_batches`: 1.0
