@@ -27,6 +27,13 @@ else
     MODEL_PATH="models/base/${MODEL_NAME}"
 fi
 
+# For passkey, we want a lower LR
+if [ "$DATASET" = "passkey" ]; then
+    EXTRA_ARGS="optim.lr=6e-6"
+else
+    EXTRA_ARGS=""
+fi
+
 RUN_ID="${MODEL_NAME}-${DATASET}"
 
 source ./scripts/cscs/env.sh
@@ -43,6 +50,8 @@ srun $PROJECT_DIR/.venv/bin/python -m finetune \
     trainer="evals" \
     model.name="${MODEL_PATH}" \
     wandb.project="post-finetune-mamba" \
-    +wandb.job_type="${DATASET}"
+    +wandb.job_type="${DATASET}" \
+    scheduler=null \
+    ${EXTRA_ARGS}
 
 echo "Finished finetuning of ${RUN_ID} at $(date)"
