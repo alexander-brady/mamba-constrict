@@ -34,7 +34,14 @@ def calculate_perplexity_on_document(
         Tuple of (nll_sum, n_tokens) for this document
     """
     # Tokenize the entire document
-    input_ids = tokenizer.encode(text, return_tensors="pt", add_special_tokens=True)
+    # - Avoid add_special_tokens=True because different tokenizers add BOS/EOS differently,
+    #   which changes PPL and hurts reproducibility.
+    # - We manually add BOS token if available.
+    input_ids = tokenizer.encode(text, return_tensors="pt", add_special_tokens=False)
+    if tokenizer.bos_token_id is not None:
+        bos = torch.tensor([[tokenizer.bos_token_id]], dtype=input_ids.dtype)
+        input_ids = torch.cat([bos, input_ids], dim=1)
+
     input_ids = input_ids.to(device)
 
     seq_len = input_ids.size(1)
@@ -60,10 +67,9 @@ def calculate_perplexity_on_document(
         # outputs.loss is averaged over valid labels
         neg_log_likelihood = outputs.loss
 
-        # Count tokens that contributed to loss
-        num_valid_tokens = (target_ids != -100).sum().item()
-        batch_size = target_ids.size(0)
-        num_loss_tokens = num_valid_tokens - batch_size  # account for internal shift
+        # HF causal LM loss internally shifts labels left by 1, i.e. it computes loss on labels[:, 1:].
+        # So the correct number of loss terms is the count of unmasked labels in target_ids[:, 1:].
+        num_loss_tokens = (target_ids[:, 1:] != -100).sum().item()
 
         # Accumulate weighted by number of tokens
         nll_sum += neg_log_likelihood * num_loss_tokens
