@@ -23,7 +23,7 @@ MODEL_NAME="$1"
 VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
-else if [ "$VERSION" = "ft" ]; then
+elif [ "$VERSION" = "ft" ]; then
     MODEL_PATH="models/passkey/${MODEL_NAME}"
 else
     MODEL_PATH="models/base/${MODEL_NAME}"
