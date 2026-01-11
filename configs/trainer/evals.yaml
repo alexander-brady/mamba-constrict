@@ -1,5 +1,5 @@
 defaults:
-    - trainer/default
+    - default
     
 max_epochs: 1
 max_steps: -1
