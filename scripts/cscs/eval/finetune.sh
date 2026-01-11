@@ -51,7 +51,7 @@ srun $PROJECT_DIR/.venv/bin/python -m finetune \
     model.name="${MODEL_PATH}" \
     wandb.project="post-finetune-mamba" \
     +wandb.job_type="${DATASET}" \
-    scheduler=null \
+    ~scheduler \
     ${EXTRA_ARGS}
 
 echo "Finished finetuning of ${RUN_ID} at $(date)"
