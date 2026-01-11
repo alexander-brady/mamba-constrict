@@ -152,6 +152,9 @@ def main():
     parser.add_argument(
         "--wandb_name", type=str, default=None, help="Weights & Biases run name"
     )
+    parser.add_argument(
+        "--wandb_dir", type=str, default=None, help="Weights & Biases output directory"
+    )
     args = parser.parse_args()
 
     # Setup
@@ -165,6 +168,7 @@ def main():
             project=args.wandb_project,
             entity=args.wandb_entity,
             name=args.wandb_name or model_display_name,
+            dir=args.wandb_dir,
             config={
                 "model": args.model,
                 "context_lengths": args.context_lengths,

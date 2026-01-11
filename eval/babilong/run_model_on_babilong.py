@@ -42,6 +42,7 @@ def main(
     wandb_project: str | None = None,
     wandb_entity: str | None = None,
     wandb_name: str | None = None,
+    wandb_dir: str | None = None,
 ) -> None:
     """
     Main function to get model predictions on babilong and save them using vLLM.
@@ -59,6 +60,7 @@ def main(
         wandb_project (str): Weights & Biases project name.
         wandb_entity (str): Weights & Biases entity name.
         wandb_name (str): Weights & Biases run name.
+        wandb_dir (str): Weights & Biases output directory.
     """
     if model_path is None:
         model_path = model_name
@@ -70,6 +72,7 @@ def main(
             project=wandb_project,
             entity=wandb_entity,
             name=wandb_name or model_name,
+            dir=wandb_dir,
             config={
                 "model_name": model_name,
                 "model_path": model_path,
@@ -228,6 +231,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--wandb_name", type=str, default=None, help="Weights & Biases run name"
     )
+    parser.add_argument(
+        "--wandb_dir", type=str, default=None, help="Weights & Biases output directory"
+    )
 
     args = parser.parse_args()
 
@@ -246,4 +252,5 @@ if __name__ == "__main__":
         args.wandb_project,
         args.wandb_entity,
         args.wandb_name,
+        args.wandb_dir,
     )

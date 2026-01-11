@@ -36,7 +36,9 @@ echo "MODEL_PATH=${MODEL_PATH}"
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
+WANDB_DIR="${PROJECT_DIR}/outputs/babilong/"
 mkdir -p "$RESULTS_DIR"
+mkdir -p "$WANDB_DIR"
 
 python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'Device: {torch.cuda.get_device_name(0)}')"
 
@@ -53,7 +55,8 @@ python3 run_model_on_babilong.py \
     --use_post_prompt \
     --wandb_project "eval-mamba" \
     --wandb_entity "mamba-monks" \
-    --wandb_name "${MODEL_NAME}"
+    --wandb_name "${MODEL_NAME}" \
+    --wandb_dir "${WANDB_DIR}"
 
 python3 result.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
 popd > /dev/null

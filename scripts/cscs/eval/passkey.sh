@@ -35,8 +35,9 @@ echo "MODEL_PATH=${MODEL_PATH}"
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
+WANDB_DIR="${PROJECT_DIR}/outputs/passkey/"
 mkdir -p "$RESULTS_DIR"
-
+mkdir -p "$WANDB_DIR"
 
 pushd eval/passkey_retrieval > /dev/null
 python3 run_test.py \
@@ -46,7 +47,8 @@ python3 run_test.py \
     --num_tests 50 \
     --wandb_project "eval-mamba" \
     --wandb_entity "mamba-monks" \
-    --wandb_name "${MODEL_NAME}"
+    --wandb_name "${MODEL_NAME}" \
+    --wandb_dir "${WANDB_DIR}"
 
 python3 result.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
 popd > /dev/null

@@ -86,6 +86,7 @@ def run_passkey_test(args):
             project=args.wandb_project,
             entity=args.wandb_entity,
             name=args.wandb_name or model_display_name,
+            dir=args.wandb_dir,
             config={
                 "model": model_name,
                 "token_lengths": token_lengths,
@@ -230,6 +231,9 @@ def main():
     )
     parser.add_argument(
         "--wandb_name", type=str, default=None, help="Weights & Biases run name"
+    )
+    parser.add_argument(
+        "--wandb_dir", type=str, default=None, help="Weights & Biases output directory"
     )
     args = parser.parse_args()
 
