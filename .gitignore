@@ -46,3 +46,6 @@ desktop.ini
 .idea/
 results/
 models/
+
+# Dump files
+core_nid*
