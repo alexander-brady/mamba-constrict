@@ -187,7 +187,7 @@ if __name__ == "__main__":
         "--dataset_name",
         type=str,
         required=True,
-        default="RMT-team/babilong-1k-samples",
+        default="RMT-team/babilong",
         help="dataset name from huggingface",
     )
     parser.add_argument(

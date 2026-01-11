@@ -16,6 +16,7 @@
 set -euo pipefail
 mkdir -p logs
 
+PROJECT_DIR="/users/teilers/scratch/finetune"
 MODEL_NAME="$1"
 
 # if second arg is set to hf, it's a hf model name
@@ -23,11 +24,11 @@ MODEL_NAME="$1"
 VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
-else if [ "$VERSION" = "ft" ]; then
-    MODEL_PATH="models/pg19/${MODEL_NAME}"
 else
     MODEL_PATH="models/base/${MODEL_NAME}"
 fi
+
+cd "$PROJECT_DIR"
 
 echo "Starting Perplexity evaluation of ${MODEL_NAME} at $(date)"
 echo "MODEL_PATH=${MODEL_PATH}"

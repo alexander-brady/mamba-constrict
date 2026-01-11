@@ -1,0 +1,129 @@
+{
+  "os": "Linux-5.14.21-150500.55.65_13.0.74-cray_shasta_c_64k-aarch64-with-glibc2.39",
+  "python": "CPython 3.12.3",
+  "startedAt": "2026-01-10T17:33:05.541926Z",
+  "args": [
+    "--model",
+    "state-spaces/mamba-2.8b-hf",
+    "--data_dir",
+    "/users/teilers/scratch/finetune/data/pg19/test_128k",
+    "--save_dir",
+    "/users/teilers/scratch/finetune/results/state-spaces/mamba-2.8b-hf",
+    "--context_lengths",
+    "2048",
+    "4096",
+    "8192",
+    "16384",
+    "32768",
+    "65536",
+    "131072",
+    "--wandb_project",
+    "eval-mamba",
+    "--wandb_entity",
+    "mamba-monks",
+    "--wandb_name",
+    "state-spaces/mamba-2.8b-hf"
+  ],
+  "program": "/iopsstor/scratch/cscs/teilers/finetune/eval/pg19/run_perplexity.py",
+  "codePath": "eval/pg19/run_perplexity.py",
+  "codePathLocal": "run_perplexity.py",
+  "git": {
+    "remote": "https://github.com/alexander-brady/finetune.git",
+    "commit": "8e13d61be2932f3eb7f91181e585f5b077e472fa"
+  },
+  "email": "tim.eilers@protonmail.com",
+  "root": "/iopsstor/scratch/cscs/teilers/finetune/eval/pg19",
+  "host": "nid007531",
+  "executable": "/usr/bin/python3",
+  "cpu_count": 288,
+  "cpu_count_logical": 288,
+  "gpu": "NVIDIA GH200 120GB",
+  "gpu_count": 4,
+  "disk": {
+    "/": {
+      "total": "458735026176",
+      "used": "983040"
+    }
+  },
+  "memory": {
+    "total": "917470052352"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GH200 120GB",
+      "memoryTotal": "102625181696",
+      "cudaCores": 16896,
+      "architecture": "Hopper",
+      "uuid": "GPU-59f0d558-8975-b5e0-91c7-df015dae89a9"
+    },
+    {
+      "name": "NVIDIA GH200 120GB",
+      "memoryTotal": "102625181696",
+      "cudaCores": 16896,
+      "architecture": "Hopper",
+      "uuid": "GPU-a2e379c8-2834-4c7e-6afd-956cc82f19c0"
+    },
+    {
+      "name": "NVIDIA GH200 120GB",
+      "memoryTotal": "102625181696",
+      "cudaCores": 16896,
+      "architecture": "Hopper",
+      "uuid": "GPU-639b0992-e8d6-5eb1-f8ce-8ba6ec8e2d71"
+    },
+    {
+      "name": "NVIDIA GH200 120GB",
+      "memoryTotal": "102625181696",
+      "cudaCores": 16896,
+      "architecture": "Hopper",
+      "uuid": "GPU-056f9830-86d9-03b4-014f-06418547ac90"
+    }
+  ],
+  "cudaVersion": "13.0",
+  "slurm": {
+    "cluster_name": "clariden",
+    "conf": "/var/spool/slurmd/conf-cache/slurm.conf",
+    "cpus_on_node": "288",
+    "cpus_per_task": "8",
+    "edf_expanded": "image = \"/users/teilers/scratch/finetune.sqsh\"\nmounts = [\n    \"/capstor:/capstor:\",\n    \"/iopsstor:/iopsstor:\",\n    \"/users:/users:\"\n  ]\n[env]\nOCI_ANNOTATION_com__hooks__aws_ofi_nccl__enabled = \"true\"\nOCI_ANNOTATION_com__hooks__aws_ofi_nccl__variant = \"cuda12\"\n[annotations]\ncom.hooks.aws_ofi_nccl.enabled = \"true\"\ncom.hooks.aws_ofi_nccl.variant = \"cuda12\"\n",
+    "edf_imagestore": "/iopsstor/scratch/cscs/teilers/.edf_imagestore",
+    "gpus_on_node": "4",
+    "gpus_per_node": "4",
+    "gtids": "0",
+    "job_account": "a163",
+    "job_cpus_per_node": "288",
+    "job_end_time": "1768109556",
+    "job_gid": "65643",
+    "job_gpus": "0,1,2,3",
+    "job_id": "1342580",
+    "job_name": "perplexity",
+    "job_nodelist": "nid007531",
+    "job_num_nodes": "1",
+    "job_partition": "normal",
+    "job_qos": "normal",
+    "job_start_time": "1768066356",
+    "job_uid": "1312",
+    "job_user": "teilers",
+    "jobid": "1342580",
+    "localid": "0",
+    "mem_per_node": "327680",
+    "nnodes": "1",
+    "nodeid": "0",
+    "nodelist": "nid007531",
+    "nprocs": "1",
+    "ntasks": "1",
+    "ntasks_per_node": "1",
+    "prio_process": "0",
+    "procid": "0",
+    "script_context": "prolog_task",
+    "spank__slurm_spank_option_pyxis_environment": "finetune_old",
+    "submit_dir": "/iopsstor/scratch/cscs/teilers/finetune",
+    "submit_host": "clariden-ln002",
+    "task_pid": "149407",
+    "tasks_per_node": "1",
+    "time_format": "relative",
+    "topology_addr": "global.group36.nid007531",
+    "topology_addr_pattern": "switch.switch.node",
+    "tres_per_task": "cpu=8"
+  },
+  "writerId": "l84zv225ek1403pqmfk9ck9aguztft8m"
+}
