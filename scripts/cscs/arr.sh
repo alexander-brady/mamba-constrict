@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
-#SBATCH --array=0-25%4 
-# Array: 0-23: combinations of 4 criterions x 6 lambdas; 24: default (no regularization); 25: baseline eval only
+#SBATCH --array=0-19%4 
+# Array: 0-17: combinations of 3 criterions x 6 lambdas; 18: default (no regularization); 19: baseline eval only
 
 set -euo pipefail
 mkdir -p logs
@@ -20,16 +20,16 @@ MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
 
 # ---- BASELINE: eval only ----
-if [ ${SLURM_ARRAY_TASK_ID} -eq 25 ]; then
+if [ ${SLURM_ARRAY_TASK_ID} -eq 19 ]; then
     sbatch scripts/cscs/arr_eval.sh "${BASE_MODEL}" "true"
     exit 0
 fi
 
-CRITERIONS=("l1" "l2" "mahalanobis" "temporal_drift")
+CRITERIONS=("l1" "l2" "temporal_drift")
 LAMBDAS=(0.01 0.1 0.3 0.5 1.0 2.0)
 
 # ---- Resolve criterion / lambda ----
-if [ ${SLURM_ARRAY_TASK_ID} -eq 24 ]; then
+if [ ${SLURM_ARRAY_TASK_ID} -eq 18 ]; then
     CRITERION="default"
     LAMBDA=0.0
 else
