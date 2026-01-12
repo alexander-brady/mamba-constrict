@@ -17,10 +17,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 def calculate_perplexity_on_document(
-    model, tokenizer, text, context_length, device, stride=512
+    model, tokenizer, text, context_length, device, stride=512,
+    n_windows=10, last_k=100,
 ):
     """
-    Calculate perplexity on a single document using sliding window.
+    Calculate perplexity on a single document using DeciMamba-style evaluation.
 
     Args:
         model: The language model
@@ -28,7 +29,9 @@ def calculate_perplexity_on_document(
         text: Raw text of the document
         context_length: Maximum context window size
         device: Device to run on
-        stride: Stride for sliding window
+        stride: Stride for sliding window (unused, kept for compatibility)
+        n_windows: Number of windows to evaluate (DeciMamba: 10)
+        last_k: Number of last labels to score per window (DeciMamba: 100)
 
     Returns:
         Tuple of (nll_sum, n_tokens) for this document
@@ -48,17 +51,31 @@ def calculate_perplexity_on_document(
     nll_sum = 0.0
     n_tokens = 0
 
-    prev_end_loc = 0
-    for begin_loc in range(0, seq_len, stride):
+    # DeciMamba window selection: n_windows windows with maximal constant stride
+    if seq_len <= context_length:
+        begins = [0]  # only one window fits
+    else:
+        max_start = seq_len - context_length
+        if n_windows <= 1:
+            begins = [max_start]
+        else:
+            stride_dm = max(1, max_start // (n_windows - 1))
+            begins = [i * stride_dm for i in range(n_windows)]
+            # safety: ensure windows fit
+            begins = [b for b in begins if b <= max_start]
+            if not begins:
+                begins = [0]
+
+    for begin_loc in begins:
         end_loc = min(begin_loc + context_length, seq_len)
-        trg_len = end_loc - prev_end_loc
 
         # Extract window
         input_ids_window = input_ids[:, begin_loc:end_loc]
         target_ids = input_ids_window.clone()
 
-        # Mask tokens from previous window (only compute loss on new tokens)
-        target_ids[:, :-trg_len] = -100
+        # DeciMamba: score only the last `last_k` labels
+        keep_from = max(target_ids.size(1) - last_k, 0)
+        target_ids[:, :keep_from] = -100
 
         # Forward pass with labels
         with torch.no_grad():
@@ -75,10 +92,6 @@ def calculate_perplexity_on_document(
         nll_sum += neg_log_likelihood * num_loss_tokens
         n_tokens += num_loss_tokens
 
-        prev_end_loc = end_loc
-        if end_loc == seq_len:
-            break
-
     return nll_sum, n_tokens
 
 
@@ -86,13 +99,26 @@ def calculate_perplexity(
     model, tokenizer, documents, context_length, device, stride=512
 ):
     """
-    Calculate perplexity across all documents using sliding window approach.
+    Calculate perplexity across a list of documents using DeciMamba-style evaluation.
 
-    This implementation follows the standard methodology:
-    - Processes each document independently (no cross-document context)
-    - Uses overlapping windows with configurable stride
-    - Only computes loss on new tokens in each window (via masking)
-    - Accumulates weighted NLL by number of tokens
+    DeciMamba protocol (per document):
+      - Evaluate a fixed number of windows (default 10) of length `context_length`
+        using a maximal constant stride so the windows span the document.
+      - Compute loss only on the last `last_k` labels in each window (default 100),
+        which approximates model performance near positions
+        [context_length - last_k, context_length].
+
+    Aggregation:
+      - The model returns an average loss over the unmasked labels (after the internal
+        causal shift). We convert this to total NLL by multiplying by the number of
+        evaluated labels, sum across all windows and documents, then divide by the
+        total number of evaluated labels.
+      - Perplexity is exp(average_nll).
+
+    Notes:
+      - Each document is evaluated independently (no cross-document context).
+      - The `stride` argument is kept for API compatibility but is not used in this
+        DeciMamba-style evaluator.
     """
     model.eval()
     total_nll_sum = 0.0
