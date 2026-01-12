@@ -48,6 +48,7 @@ python3 run_model_on_babilong.py \
     --dataset_name "RMT-team/babilong" \
     --model_name "$MODEL_NAME" \
     --model_path "$MODEL_PATH" \
+    --tokenizer "state-spaces/mamba-2.8b-hf" \
     --tasks qa1 qa2 qa3 qa4 qa5 qa6 qa7 qa8 qa9 qa10 \
     --lengths 2k 4k 8k 16k 32k 64k 128k 256k 512k 1M \
     --use_instruction \

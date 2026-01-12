@@ -149,6 +149,9 @@ def main():
         "--model", "-m", required=True, help="Model path (HuggingFace or local)"
     )
     parser.add_argument(
+        "--tokenizer", type=str, default=None, help="Tokenizer path (defaults to model path if not specified)"
+    )
+    parser.add_argument(
         "--data_dir",
         "-d",
         required=True,
@@ -210,7 +213,8 @@ def main():
     print(f"Stride: {args.stride}")
 
     # Load model
-    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
+    tokenizer_path = args.tokenizer or args.model
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         trust_remote_code=True,

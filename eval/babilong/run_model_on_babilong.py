@@ -39,6 +39,7 @@ def main(
     use_instruction: bool,
     use_examples: bool,
     use_post_prompt: bool,
+    tokenizer_path: str | None = None,
     wandb_project: str | None = None,
     wandb_entity: str | None = None,
     wandb_name: str | None = None,
@@ -57,6 +58,7 @@ def main(
         use_instruction (bool): Flag to use instruction in prompt.
         use_examples (bool): Flag to use examples in prompt.
         use_post_prompt (bool): Flag to use post_prompt text in prompt.
+        tokenizer_path (str): Path to tokenizer (defaults to model_path if not specified).
         wandb_project (str): Weights & Biases project name.
         wandb_entity (str): Weights & Biases entity name.
         wandb_name (str): Weights & Biases run name.
@@ -88,8 +90,10 @@ def main(
 
     # Load model with vLLM
     print(f"Loading model with vLLM: {model_path}")
+    tokenizer = tokenizer_path or model_path
     llm = LLM(
         model=model_path,
+        tokenizer=tokenizer,
         trust_remote_code=True,
         dtype="bfloat16",
         max_model_len=2000000,
@@ -200,6 +204,9 @@ if __name__ == "__main__":
         "--model_path", type=str, required=False, help="path to model, optional"
     )
     parser.add_argument(
+        "--tokenizer", type=str, required=False, help="path to tokenizer, optional (defaults to model_path)"
+    )
+    parser.add_argument(
         "--tasks",
         type=str,
         nargs="+",
@@ -249,6 +256,7 @@ if __name__ == "__main__":
         args.use_instruction,
         args.use_examples,
         args.use_post_prompt,
+        args.tokenizer,
         args.wandb_project,
         args.wandb_entity,
         args.wandb_name,

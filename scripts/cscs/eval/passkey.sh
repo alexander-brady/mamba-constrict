@@ -42,6 +42,7 @@ mkdir -p "$WANDB_DIR"
 pushd eval/passkey_retrieval > /dev/null
 python3 run_test.py \
     --model "$MODEL_PATH" \
+    --tokenizer "state-spaces/mamba-2.8b-hf" \
     --save_dir "$RESULTS_DIR" \
     --token_lengths 2048 4096 8192 16384 32768 65536 131072 262144 \
     --num_tests 50 \

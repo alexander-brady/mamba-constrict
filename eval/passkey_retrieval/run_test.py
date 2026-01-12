@@ -97,9 +97,11 @@ def run_passkey_test(args):
 
     # Load model with vLLM
     print(f"Loading model from: {model_name}")
+    tokenizer = args.tokenizer or model_name
 
     llm = LLM(
         model=model_name,
+        tokenizer=tokenizer,
         trust_remote_code=True,
         dtype="bfloat16",
         max_model_len=2000000,
@@ -207,6 +209,12 @@ def main():
         type=str,
         required=True,
         help="Model path (HuggingFace or local)",
+    )
+    parser.add_argument(
+        "--tokenizer",
+        type=str,
+        default=None,
+        help="Tokenizer path (defaults to model path if not specified)",
     )
     parser.add_argument(
         "--token_lengths",
