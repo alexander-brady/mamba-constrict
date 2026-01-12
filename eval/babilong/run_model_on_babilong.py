@@ -164,9 +164,13 @@ def main(
                 lambda row: row["target"].lower() in row["output"].lower(), axis=1
             ).mean()
             if use_wandb:
+                if "babilong" in model_path: # fine-tuned model
+                    wandb_path = f"baibilong/finetuned/{task}/{split_name}"
+                else:
+                    wandb_path = f"babilong/{task}/{split_name}"
                 wandb.log({
-                    f"babilong/{task}/{split_name}/accuracy": accuracy,
-                    f"babilong/{task}/{split_name}/total": len(df),
+                    f"{wandb_path}/accuracy": accuracy,
+                    f"{wandb_path}/total": len(df),
                 })
 
     # Finish wandb run

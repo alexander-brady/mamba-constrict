@@ -117,6 +117,12 @@ def run_passkey_test(args):
                 item = json.loads(line)
                 key = f"{item['target_tokens']}_{item['test_id']}"
                 has_data[key] = item
+                
+    # Wandb logging setup
+    if "passkey" in model_name:
+        wandb_path_prefix = "passkey/finetuned"
+    else:
+        wandb_path_prefix = "passkey"
 
     results = []
     with open(out_file, "w", encoding="utf-8") as fout:
@@ -176,14 +182,14 @@ def run_passkey_test(args):
                 length_results = [r for r in results if r["target_tokens"] == target_tokens]
                 accuracy = sum(r["is_correct"] for r in length_results) / len(length_results)
                 wandb.log({
-                    f"passkey/{target_tokens}/accuracy": accuracy,
-                    f"passkey/{target_tokens}/total": len(length_results),
+                    f"{wandb_path_prefix}/{target_tokens}/accuracy": accuracy,
+                    f"{wandb_path_prefix}/{target_tokens}/total": len(length_results),
                 })
 
     # Log overall accuracy and finish wandb
     if use_wandb:
         overall_accuracy = sum(r["is_correct"] for r in results) / len(results)
-        wandb.log({"passkey/overall_accuracy": overall_accuracy})
+        wandb.log({f"{wandb_path_prefix}/overall_accuracy": overall_accuracy})
         wandb.finish()
 
     return results, out_file
