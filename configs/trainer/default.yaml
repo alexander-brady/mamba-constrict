@@ -8,7 +8,7 @@ log_every_n_steps: 10
 precision: bf16-mixed
 accumulate_grad_batches: 16
 
-max_steps: 100
+max_steps: 5000
 
 val_check_interval: 100 # Validate every 100 training steps
 limit_val_batches: 0.01  # Use 1% of validation set

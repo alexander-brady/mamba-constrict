@@ -26,7 +26,7 @@ if [ ${SLURM_ARRAY_TASK_ID} -eq 19 ]; then
 fi
 
 CRITERIONS=("l1" "l2" "temporal_drift")
-LAMBDAS=(0.01 0.1 0.3 0.5 1.0 2.0)
+LAMBDAS=(0.0001 0.0003 0.001 0.003 0.005 0.01)
 
 # ---- Resolve criterion / lambda ----
 if [ ${SLURM_ARRAY_TASK_ID} -eq 18 ]; then
