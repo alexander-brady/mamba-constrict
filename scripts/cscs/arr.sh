@@ -18,6 +18,7 @@ export EVAL_ONLY=${EVAL_ONLY:-false}
 
 MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
+STEPS=5k
 
 # ---- BASELINE: eval only ----
 if [ ${SLURM_ARRAY_TASK_ID} -eq 19 ]; then
@@ -39,7 +40,7 @@ else
     LAMBDA=${LAMBDAS[$LAMBDA_INDEX]}
 fi
 
-RUN_ID="mamba-${MODEL_SIZE}_${CRITERION}_w${LAMBDA}"
+RUN_ID="mamba-${MODEL_SIZE}_${CRITERION}_w${LAMBDA}_${STEPS}"
 
 echo "Submitting jobs for ${RUN_ID} at $(date)"
 
