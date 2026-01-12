@@ -16,7 +16,6 @@
 set -euo pipefail
 mkdir -p logs
 
-PROJECT_DIR="/users/teilers/scratch/finetune"
 MODEL_NAME="$1"
 
 # if second arg is set to hf, it's a hf model name
@@ -25,7 +24,7 @@ VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
 else
-    MODEL_PATH="models/base/${MODEL_NAME}"
+    MODEL_PATH="${PROJECT_DIR}/models/base/${MODEL_NAME}"
 fi
 
 cd "$PROJECT_DIR"

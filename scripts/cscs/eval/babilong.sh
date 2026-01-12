@@ -25,9 +25,9 @@ VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
 elif [ "$VERSION" = "ft" ]; then
-    MODEL_PATH="models/babilong/${MODEL_NAME}"
+    MODEL_PATH="${PROJECT_DIR}/models/babilong/${MODEL_NAME}-babilong"
 else
-    MODEL_PATH="models/base/${MODEL_NAME}"
+    MODEL_PATH="${PROJECT_DIR}/models/base/${MODEL_NAME}"
 fi
 
 echo "Starting BABILong evaluation of ${MODEL_NAME} at $(date)"
