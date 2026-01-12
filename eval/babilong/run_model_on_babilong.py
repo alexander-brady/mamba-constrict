@@ -39,9 +39,11 @@ def main(
     use_instruction: bool,
     use_examples: bool,
     use_post_prompt: bool,
+    tokenizer_path: str | None = None,
     wandb_project: str | None = None,
     wandb_entity: str | None = None,
     wandb_name: str | None = None,
+    wandb_dir: str | None = None,
 ) -> None:
     """
     Main function to get model predictions on babilong and save them using vLLM.
@@ -56,9 +58,11 @@ def main(
         use_instruction (bool): Flag to use instruction in prompt.
         use_examples (bool): Flag to use examples in prompt.
         use_post_prompt (bool): Flag to use post_prompt text in prompt.
+        tokenizer_path (str): Path to tokenizer (defaults to model_path if not specified).
         wandb_project (str): Weights & Biases project name.
         wandb_entity (str): Weights & Biases entity name.
         wandb_name (str): Weights & Biases run name.
+        wandb_dir (str): Weights & Biases output directory.
     """
     if model_path is None:
         model_path = model_name
@@ -70,6 +74,7 @@ def main(
             project=wandb_project,
             entity=wandb_entity,
             name=wandb_name or model_name,
+            dir=wandb_dir,
             config={
                 "model_name": model_name,
                 "model_path": model_path,
@@ -85,8 +90,10 @@ def main(
 
     # Load model with vLLM
     print(f"Loading model with vLLM: {model_path}")
+    tokenizer = tokenizer_path or model_path
     llm = LLM(
         model=model_path,
+        tokenizer=tokenizer,
         trust_remote_code=True,
         dtype="bfloat16",
         max_model_len=2000000,
@@ -201,6 +208,9 @@ if __name__ == "__main__":
         "--model_path", type=str, required=False, help="path to model, optional"
     )
     parser.add_argument(
+        "--tokenizer", type=str, required=False, help="path to tokenizer, optional (defaults to model_path)"
+    )
+    parser.add_argument(
         "--tasks",
         type=str,
         nargs="+",
@@ -232,6 +242,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--wandb_name", type=str, default=None, help="Weights & Biases run name"
     )
+    parser.add_argument(
+        "--wandb_dir", type=str, default=None, help="Weights & Biases output directory"
+    )
 
     args = parser.parse_args()
 
@@ -247,7 +260,9 @@ if __name__ == "__main__":
         args.use_instruction,
         args.use_examples,
         args.use_post_prompt,
+        args.tokenizer,
         args.wandb_project,
         args.wandb_entity,
         args.wandb_name,
+        args.wandb_dir,
     )

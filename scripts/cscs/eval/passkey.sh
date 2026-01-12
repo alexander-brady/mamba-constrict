@@ -24,9 +24,9 @@ VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
 elif [ "$VERSION" = "ft" ]; then
-    MODEL_PATH="models/passkey/${MODEL_NAME}"
+    MODEL_PATH="${PROJECT_DIR}/models/passkey/${MODEL_NAME}-passkey"
 else
-    MODEL_PATH="models/base/${MODEL_NAME}"
+    MODEL_PATH="${PROJECT_DIR}/models/base/${MODEL_NAME}"
 fi
 
 echo "Starting Passkey evaluation of ${MODEL_NAME} at $(date)"
@@ -35,18 +35,21 @@ echo "MODEL_PATH=${MODEL_PATH}"
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
+WANDB_DIR="${PROJECT_DIR}/outputs/passkey/"
 mkdir -p "$RESULTS_DIR"
-
+mkdir -p "$WANDB_DIR"
 
 pushd eval/passkey_retrieval > /dev/null
 python3 run_test.py \
     --model "$MODEL_PATH" \
+    --tokenizer "state-spaces/mamba-2.8b-hf" \
     --save_dir "$RESULTS_DIR" \
     --token_lengths 2048 4096 8192 16384 32768 65536 131072 262144 \
     --num_tests 50 \
     --wandb_project "eval-mamba" \
     --wandb_entity "mamba-monks" \
-    --wandb_name "${MODEL_NAME}"
+    --wandb_name "${MODEL_NAME}" \
+    --wandb_dir "${WANDB_DIR}"
 
 python3 result.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
 popd > /dev/null

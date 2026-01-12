@@ -16,7 +16,7 @@
 set -euo pipefail
 mkdir -p logs
 
-PROJECT_DIR="/users/teilers/scratch/finetune"
+PROJECT_DIR="/iopsstor/scratch/cscs/teilers/finetune"
 MODEL_NAME="$1"
 
 # if second arg is set to hf, it's a hf model name
@@ -25,7 +25,7 @@ VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
 else
-    MODEL_PATH="models/base/${MODEL_NAME}"
+    MODEL_PATH="${PROJECT_DIR}/models/base/${MODEL_NAME}"
 fi
 
 cd "$PROJECT_DIR"
@@ -36,19 +36,23 @@ echo "MODEL_PATH=${MODEL_PATH}"
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
+WANDB_DIR="${PROJECT_DIR}/outputs/perplexity/"
 mkdir -p "$RESULTS_DIR"
+mkdir -p "$WANDB_DIR"
 
 python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'Device: {torch.cuda.get_device_name(0)}')"
 
 pushd eval/pg19 > /dev/null
 python3 run_perplexity.py \
     --model "$MODEL_PATH" \
+    --tokenizer "state-spaces/mamba-2.8b-hf" \
     --data_dir "${PROJECT_DIR}/data/pg19/test_128k" \
     --save_dir "$RESULTS_DIR" \
     --context_lengths 2048 4096 8192 16384 32768 65536 131072 \
     --wandb_project "eval-mamba" \
     --wandb_entity "mamba-monks" \
-    --wandb_name "${MODEL_NAME}"
+    --wandb_name "${MODEL_NAME}" \
+    --wandb_dir "${WANDB_DIR}"
 
 python3 plot_results.py --results_dir "$RESULTS_DIR" --model_name "$MODEL_NAME"
 popd > /dev/null

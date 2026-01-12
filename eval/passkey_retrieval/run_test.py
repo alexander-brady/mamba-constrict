@@ -86,6 +86,7 @@ def run_passkey_test(args):
             project=args.wandb_project,
             entity=args.wandb_entity,
             name=args.wandb_name or model_display_name,
+            dir=args.wandb_dir,
             config={
                 "model": model_name,
                 "token_lengths": token_lengths,
@@ -96,9 +97,11 @@ def run_passkey_test(args):
 
     # Load model with vLLM
     print(f"Loading model from: {model_name}")
+    tokenizer = args.tokenizer or model_name
 
     llm = LLM(
         model=model_name,
+        tokenizer=tokenizer,
         trust_remote_code=True,
         dtype="bfloat16",
         max_model_len=2000000,
@@ -214,6 +217,12 @@ def main():
         help="Model path (HuggingFace or local)",
     )
     parser.add_argument(
+        "--tokenizer",
+        type=str,
+        default=None,
+        help="Tokenizer path (defaults to model path if not specified)",
+    )
+    parser.add_argument(
         "--token_lengths",
         "-t",
         type=int,
@@ -236,6 +245,9 @@ def main():
     )
     parser.add_argument(
         "--wandb_name", type=str, default=None, help="Weights & Biases run name"
+    )
+    parser.add_argument(
+        "--wandb_dir", type=str, default=None, help="Weights & Biases output directory"
     )
     args = parser.parse_args()
 
