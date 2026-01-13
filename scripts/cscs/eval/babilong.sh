@@ -50,7 +50,7 @@ python3 run_model_on_babilong.py \
     --model_path "$MODEL_PATH" \
     --tokenizer "state-spaces/mamba-2.8b-hf" \
     --tasks qa1 qa2 qa3 qa4 qa5 qa6 qa7 qa8 qa9 qa10 \
-    --lengths 2k 4k 8k 16k 32k 64k 128k 256k 512k 1M \
+    --lengths 2k 4k 8k 16k 32k 64k 128k 256k \
     --use_instruction \
     --use_examples \
     --use_post_prompt \

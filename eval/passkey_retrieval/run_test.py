@@ -37,28 +37,6 @@ def generate_prompt(n_garbage, seed=None):
     return prompt, passkey, depth
 
 
-def query_llm(
-    prompt,
-    llm,
-    temperature=0.0,
-    max_tokens=10,
-):
-    """Query the model with vLLM (no truncation - vLLM handles long contexts automatically)."""
-    # Set up sampling parameters
-    sampling_params = SamplingParams(
-        temperature=temperature if temperature > 0 else 0.0,
-        max_tokens=max_tokens,
-    )
-
-    # Generate - vLLM handles tokenization and generation internally
-    outputs = llm.generate([prompt], sampling_params)
-
-    # Extract the generated text (vLLM returns only the generated part, not the prompt)
-    response = outputs[0].outputs[0].text
-
-    return response
-
-
 def extract_passkey(response):
     """Extract the passkey from model response."""
     try:
@@ -104,7 +82,7 @@ def run_passkey_test(args):
         tokenizer=tokenizer,
         trust_remote_code=True,
         dtype="bfloat16",
-        max_model_len=2000000,
+        max_model_len=300000,
     )
     print("Model loaded successfully with vLLM")
 
@@ -133,56 +111,60 @@ def run_passkey_test(args):
             # Convert token length to character length
             str_length = calc_str_length(target_tokens)
 
-            for i in tqdm(
-                range(num_tests), desc=f"Tests (tokens={target_tokens})", leave=False
-            ):
+            # Separate existing results from those needing inference
+            existing_results = []
+            to_process = []
+
+            for i in range(num_tests):
                 key = f"{target_tokens}_{i}"
-
-                # Skip if already processed
                 if key in has_data:
-                    result = has_data[key]
-                    results.append(result)
-                    fout.write(json.dumps(result, ensure_ascii=False) + "\n")
-                    fout.flush()
-                    continue
+                    existing_results.append(has_data[key])
+                else:
+                    # Generate prompt and store for batch processing
+                    prompt_text, expected_passkey, depth = generate_prompt(str_length, seed=i)
+                    to_process.append({
+                        "test_id": i,
+                        "prompt": prompt_text,
+                        "expected_passkey": expected_passkey,
+                        "depth": depth,
+                    })
 
-                # Generate prompt and get expected passkey
-                prompt_text, expected_passkey, depth = generate_prompt(str_length, seed=i)
+            # Batch inference for all prompts that need processing
+            batch_results = []
+            if to_process:
+                print(f"Running batched inference on {len(to_process)} samples for tokens={target_tokens}...")
+                prompts = [item["prompt"] for item in to_process]
+                sampling_params = SamplingParams(temperature=0.0, max_tokens=10)
+                outputs = llm.generate(prompts, sampling_params)
 
+                for item, output in zip(to_process, outputs):
+                    response = output.outputs[0].text
+                    predicted_passkey = extract_passkey(response)
+                    is_correct = predicted_passkey == item["expected_passkey"]
 
-                # Query the model
-                response = query_llm(
-                    prompt_text,
-                    llm,
-                    temperature=0.0,
-                    max_tokens=10,
-                )
+                    result = {
+                        "test_id": item["test_id"],
+                        "target_tokens": target_tokens,
+                        "depth": item["depth"],
+                        "expected_passkey": item["expected_passkey"],
+                        "predicted_passkey": predicted_passkey,
+                        "response": response,
+                        "is_correct": is_correct,
+                    }
+                    batch_results.append(result)
 
-                # Extract passkey from response
-                predicted_passkey = extract_passkey(response)
+            # Combine and sort results by test_id
+            length_results = existing_results + batch_results
+            length_results.sort(key=lambda x: x["test_id"])
 
-                # Check if correct
-                is_correct = predicted_passkey == expected_passkey
-
-                # Store result
-                result = {
-                    "test_id": i,
-                    "target_tokens": target_tokens,
-                    "depth": depth,
-                    "expected_passkey": expected_passkey,
-                    "predicted_passkey": predicted_passkey,
-                    "response": response,
-                    "is_correct": is_correct,
-                }
+            # Write all results for this token length
+            for result in length_results:
                 results.append(result)
-
-                # Write to file
                 fout.write(json.dumps(result, ensure_ascii=False) + "\n")
-                fout.flush()
+            fout.flush()
 
             # Log accuracy per token length to wandb
             if use_wandb:
-                length_results = [r for r in results if r["target_tokens"] == target_tokens]
                 accuracy = sum(r["is_correct"] for r in length_results) / len(length_results)
                 wandb.log({
                     f"{wandb_path_prefix}/{target_tokens}/accuracy": accuracy,
