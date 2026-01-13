@@ -16,19 +16,6 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
 
-def query_llm(prompt, llm, temperature=0.0, max_tokens=20):
-    """Query the model with vLLM."""
-    sampling_params = SamplingParams(
-        temperature=temperature if temperature > 0 else 0.0,
-        max_tokens=max_tokens,
-    )
-
-    outputs = llm.generate([prompt], sampling_params)
-    response = outputs[0].outputs[0].text
-
-    return response
-
-
 def main(
     results_folder: str,
     model_name: str,
@@ -96,7 +83,7 @@ def main(
         tokenizer=tokenizer,
         trust_remote_code=True,
         dtype="bfloat16",
-        max_model_len=2000000,
+        max_model_len=300000,
     )
     print("Model loaded successfully with vLLM")
 
@@ -140,30 +127,42 @@ def main(
                 indent=4,
             )
 
-            df = pd.DataFrame({"target": [], "output": [], "question": []})
+            # Prepare all inputs for batched inference
+            all_inputs = []
+            all_targets = []
+            all_questions = []
 
-            for sample in tqdm(task_data, desc=f"task: {task} length: {split_name}"):
-                target = sample["target"]
-                context = sample["input"]
-                question = sample["question"]
-
-                # format input text
+            print(f"Preparing {len(task_data)} samples for batched inference...")
+            for sample in task_data:
+                all_targets.append(sample["target"])
+                all_questions.append(sample["question"])
                 input_text = get_formatted_input(
-                    context,
-                    question,
+                    sample["input"],
+                    sample["question"],
                     prompt_cfg["examples"],
                     prompt_cfg["instruction"],
                     prompt_cfg["post_prompt"],
                     template=prompt_cfg["template"],
                 )
+                all_inputs.append(input_text)
 
-                # Generate output using vLLM
-                output = query_llm(input_text, llm, temperature=0.0, max_tokens=20)
-                output = output.strip()
+            # Batched inference - let vLLM handle batching efficiently
+            print(f"Running batched inference on {len(all_inputs)} samples...")
+            sampling_params = SamplingParams(temperature=0.0, max_tokens=20)
+            outputs = llm.generate(all_inputs, sampling_params)
 
-                df.loc[len(df)] = [target, output, question]
-                # write results to csv file
-                df.to_csv(outfile)
+            # Collect results
+            results = []
+            for target, question, output in zip(all_targets, all_questions, outputs):
+                results.append({
+                    "target": target,
+                    "output": output.outputs[0].text.strip(),
+                    "question": question,
+                })
+
+            # Write CSV once at the end
+            df = pd.DataFrame(results)
+            df.to_csv(outfile)
 
             # Calculate accuracy for this task/length
             # Check if target word appears in the output (case-insensitive)
