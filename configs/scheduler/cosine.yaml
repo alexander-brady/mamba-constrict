@@ -5,12 +5,12 @@ schedulers:
   - _target_: torch.optim.lr_scheduler.LinearLR
     start_factor: 0.17      # MIN_LR / PEAK_LR
     end_factor: 1.0
-    total_iters: 500       # 10% of 5000
+    total_iters: 200       # 10% of 2000
     optimizer: ${...optimizer}
 
   - _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-    T_max: 4500            # 5000 - 500
+    T_max: 1800            # 2000 - 200
     eta_min: 1e-5
     optimizer: ${...optimizer}
 
-milestones: [500]
+milestones: [200]
