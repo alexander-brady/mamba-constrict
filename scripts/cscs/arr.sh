@@ -16,8 +16,8 @@ mkdir -p logs
 # If EVAL_ONLY is set to true, only run evaluation on trained models
 export EVAL_ONLY=${EVAL_ONLY:-false}
 
-MODEL_SIZE=780m
-BASE_MODEL="state-spaces/mamba2-${MODEL_SIZE}"
+MODEL_SIZE=2.8b
+BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
 STEPS=2k
 
 # ---- BASELINE: eval only ----
