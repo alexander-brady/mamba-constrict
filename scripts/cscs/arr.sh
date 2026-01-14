@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
-#SBATCH --array=0-19%4 
-# Array: 0-17: combinations of 3 criterions x 6 lambdas; 18: default (no regularization); 19: baseline eval only
+#SBATCH --array=0-7%4
+# Array: 0-5 temporal_drift (6 lambdas); 6 default (no regularization); 7 baseline eval only
 
 set -euo pipefail
 mkdir -p logs
@@ -20,17 +20,17 @@ MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
 STEPS=2k
 
+CRITERIONS=("temporal_drift")
+LAMBDAS=(0.0001 0.0003 0.001 0.003 0.005 0.01)
+
 # ---- BASELINE: eval only ----
-if [ ${SLURM_ARRAY_TASK_ID} -eq 19 ]; then
+if [ ${SLURM_ARRAY_TASK_ID} -eq 7 ]; then
     sbatch scripts/cscs/arr_eval.sh "${BASE_MODEL}" "true"
     exit 0
 fi
 
-CRITERIONS=("l1" "l2" "temporal_drift")
-LAMBDAS=(0.0001 0.0003 0.001 0.003 0.005 0.01)
-
 # ---- Resolve criterion / lambda ----
-if [ ${SLURM_ARRAY_TASK_ID} -eq 18 ]; then
+if [ ${SLURM_ARRAY_TASK_ID} -eq 6 ]; then
     CRITERION="default"
     LAMBDA=0.0
 else
@@ -57,8 +57,7 @@ TRAIN_JOBID=$(sbatch --parsable \
     "$RUN_ID" "$CRITERION" "$LAMBDA" "$MODEL_SIZE")
 
 # ---- Submit evaluation job dependent on training ----
-sbatch \
-    --dependency=afterok:${TRAIN_JOBID} \
+sbatch --dependency=afterok:${TRAIN_JOBID} \
     scripts/cscs/arr_eval.sh "${RUN_ID}"
 
 echo "Submitted TRAIN=${TRAIN_JOBID} → EVAL (afterok)"
