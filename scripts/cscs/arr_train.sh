@@ -18,6 +18,7 @@ RUN_ID="$1"
 CRITERION="$2"
 LAMBDA="$3"
 MODEL_SIZE="$4"
+PUSH_TO_HUB="${5:-false}"
 
 export CRITERION LAMBDA MODEL_SIZE
 
@@ -31,8 +32,9 @@ echo "CRITERION=${CRITERION} LAMBDA=${LAMBDA} MODEL_SIZE=${MODEL_SIZE}"
 
 srun $PROJECT_DIR/.venv/bin/python -m finetune \
     run_id="${RUN_ID}" \
+    push_to_hub="${PUSH_TO_HUB}" \
     loss="${CRITERION}" \
     loss.weight="${LAMBDA}" \
-    model.name="state-spaces/mamba-${MODEL_SIZE}-hf"
+    model.name="state-spaces/mamba-${MODEL_SIZE}-hf" \
 
 echo "Finished finetuning of ${RUN_ID} at $(date)"
