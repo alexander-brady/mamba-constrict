@@ -18,7 +18,7 @@ export EVAL_ONLY=${EVAL_ONLY:-false}
 
 MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
-STEPS=2k
+STEPS=1k
 
 CRITERIONS=("temporal_drift")
 LAMBDAS=(0.0001 0.0003 0.001 0.003 0.005 0.01)
