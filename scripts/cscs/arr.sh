@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
-#SBATCH --array=0-7%4
-# Array: 0-5 temporal_drift (6 lambdas); 6 default (no regularization); 7 baseline eval only
+#SBATCH --array=0-3%4
+# Array: 0-1 = criterions x lambdas; 2 = default (no regularization); 3 = baseline eval only
 
 set -euo pipefail
 mkdir -p logs
@@ -20,23 +20,29 @@ MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
 STEPS=1k
 
-CRITERIONS=("temporal_drift")
-LAMBDAS=(0.0001 0.0003 0.001 0.003 0.005 0.01)
+CRITERIONS=("l2" "temporal_drift")
+LAMBDAS=(0.001)
+
+NUM_LAMBDAS=${#LAMBDAS[@]}
+NUM_CRITERIONS=${#CRITERIONS[@]}
+GRID_SIZE=$((NUM_CRITERIONS * NUM_LAMBDAS))
+DEFAULT_ID=${GRID_SIZE}
+BASELINE_ID=$((GRID_SIZE + 1))
 
 # ---- BASELINE: eval only ----
-if [ ${SLURM_ARRAY_TASK_ID} -eq 7 ]; then
+if [ "${SLURM_ARRAY_TASK_ID}" -eq "${BASELINE_ID}" ]; then
     sbatch scripts/cscs/arr_eval.sh "${BASE_MODEL}" "true"
     exit 0
 fi
 
 # ---- Resolve criterion / lambda ----
-if [ ${SLURM_ARRAY_TASK_ID} -eq 6 ]; then
+if [ "${SLURM_ARRAY_TASK_ID}" -eq "${DEFAULT_ID}" ]; then
     CRITERION="default"
     LAMBDA=0.0
     PUSH_TO_HUB="false"
 else
-    CRITERION_INDEX=$((SLURM_ARRAY_TASK_ID / 6))
-    LAMBDA_INDEX=$((SLURM_ARRAY_TASK_ID % 6))
+    CRITERION_INDEX=$((SLURM_ARRAY_TASK_ID / NUM_LAMBDAS))
+    LAMBDA_INDEX=$((SLURM_ARRAY_TASK_ID % NUM_LAMBDAS))
     CRITERION=${CRITERIONS[$CRITERION_INDEX]}
     LAMBDA=${LAMBDAS[$LAMBDA_INDEX]}
     PUSH_TO_HUB="true"
