@@ -1,6 +1,6 @@
-# Finetune Mamba
+# MambaConstrict
 
-This repository contains configurations and scripts to finetune large language models, specifically Mamba models, using a novel hidden-state regularization auxiliary loss term.
+This repository contains configurations and scripts to finetune Mamba models using a novel hidden-state regularization auxiliary loss term to enable length generalization.
 
 ## Installation
 
