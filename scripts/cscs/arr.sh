@@ -39,13 +39,13 @@ fi
 if [ "${SLURM_ARRAY_TASK_ID}" -eq "${DEFAULT_ID}" ]; then
     CRITERION="default"
     LAMBDA=0.0
-    PUSH_TO_HUB="false"
+    # PUSH_TO_HUB="false"
 else
     CRITERION_INDEX=$((SLURM_ARRAY_TASK_ID / NUM_LAMBDAS))
     LAMBDA_INDEX=$((SLURM_ARRAY_TASK_ID % NUM_LAMBDAS))
     CRITERION=${CRITERIONS[$CRITERION_INDEX]}
     LAMBDA=${LAMBDAS[$LAMBDA_INDEX]}
-    PUSH_TO_HUB="true"
+    # PUSH_TO_HUB="false"
 fi
 
 RUN_ID="mamba-${MODEL_SIZE}_${CRITERION}_w${LAMBDA}_${STEPS}"
@@ -62,7 +62,7 @@ fi
 # ---- Submit training job ----
 TRAIN_JOBID=$(sbatch --parsable \
     scripts/cscs/arr_train.sh \
-    "$RUN_ID" "$CRITERION" "$LAMBDA" "$MODEL_SIZE" "$PUSH_TO_HUB")
+    "$RUN_ID" "$CRITERION" "$LAMBDA" "$MODEL_SIZE")
 
 # ---- Submit evaluation job dependent on training ----
 sbatch --dependency=afterok:${TRAIN_JOBID} \

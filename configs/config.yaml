@@ -13,8 +13,8 @@ seed: 42
 model_dir: models
 
 run_id: ${oc.env:SLURM_JOB_NAME}_${oc.env:MODEL_SIZE}_${oc.env:CRITERION}_w${oc.env:LAMBDA}_${oc.env:SLURM_JOB_ID}
-push_to_hub: false
-hub_repo_id: mamba-constrict-${oc.env:MODEL_SIZE}-${oc.env:CRITERION}-w${oc.env:LAMBDA}
+# push_to_hub: false
+# hub_repo_id: mamba-constrict-${oc.env:MODEL_SIZE}-${oc.env:CRITERION}-w${oc.env:LAMBDA}
 
 wandb:
   project: finetune-mamba
