@@ -1,5 +1,6 @@
 import lightning as L
 import torch
+import torch.nn as nn
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from transformers import PreTrainedModel
@@ -14,6 +15,10 @@ class FineTuner(L.LightningModule):
         self.model = model
         self.auxiliary_loss = instantiate(self.cfg.loss)
         self.save_hyperparameters(cfg)
+        
+        # Store model backbone's norm function and then disable it
+        self.norm_f = self.model.backbone.norm_f
+        self.model.backbone.norm_f = nn.Identity()
 
     def forward(self, **batch):
         backbone_out = self.model.backbone(
@@ -24,8 +29,11 @@ class FineTuner(L.LightningModule):
         )
 
         hidden_states = backbone_out[0]  # (B, S, D)
+        
+        # Normalize hidden states and retrieve logits
+        normalized_hidden_states = self.norm_f(hidden_states)
         logits = self.model.lm_head(
-            hidden_states.to(self.model.lm_head.weight.dtype)
+            normalized_hidden_states.to(self.model.lm_head.weight.dtype)
         ).float()
 
         loss = None
