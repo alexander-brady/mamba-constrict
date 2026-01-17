@@ -7,8 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
-#SBATCH --array=0-3%4
-# Array: 0-1 = criterions x lambdas; 2 = default (no regularization); 3 = baseline eval only
+#SBATCH --array=0-5%4 # 4x lambdas + default (no baseline)
 
 set -euo pipefail
 mkdir -p logs
@@ -16,18 +15,14 @@ mkdir -p logs
 # If EVAL_ONLY is set to true, only run evaluation on trained models
 export EVAL_ONLY=${EVAL_ONLY:-false}
 
+BASELINE_ID=-1 # No baseline
+DEFAULT_ID=5
+
 MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
-STEPS=1k
+STEPS=300
 
-CRITERIONS=("l2" "temporal_drift")
-LAMBDAS=(0.001)
-
-NUM_LAMBDAS=${#LAMBDAS[@]}
-NUM_CRITERIONS=${#CRITERIONS[@]}
-GRID_SIZE=$((NUM_CRITERIONS * NUM_LAMBDAS))
-DEFAULT_ID=${GRID_SIZE}
-BASELINE_ID=$((GRID_SIZE + 1))
+LAMBDAS=(0.0001 0.001 0.01 0.1)
 
 # ---- BASELINE: eval only ----
 if [ "${SLURM_ARRAY_TASK_ID}" -eq "${BASELINE_ID}" ]; then
@@ -41,10 +36,8 @@ if [ "${SLURM_ARRAY_TASK_ID}" -eq "${DEFAULT_ID}" ]; then
     LAMBDA=0.0
     # PUSH_TO_HUB="false"
 else
-    CRITERION_INDEX=$((SLURM_ARRAY_TASK_ID / NUM_LAMBDAS))
-    LAMBDA_INDEX=$((SLURM_ARRAY_TASK_ID % NUM_LAMBDAS))
-    CRITERION=${CRITERIONS[$CRITERION_INDEX]}
-    LAMBDA=${LAMBDAS[$LAMBDA_INDEX]}
+    CRITERION="l2"
+    LAMBDA=${LAMBDAS[${SLURM_ARRAY_TASK_ID}]}
     # PUSH_TO_HUB="false"
 fi
 
