@@ -24,10 +24,13 @@ MODEL_NAME="$1"
 VERSION="${2:-"base"}"
 if [ "$VERSION" = "hf" ]; then
     MODEL_PATH="${MODEL_NAME}"
+    RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
 elif [ "$VERSION" = "ft" ]; then
     MODEL_PATH="${PROJECT_DIR}/models/babilong/${MODEL_NAME}-babilong"
+    RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}-babilong"
 else
     MODEL_PATH="${PROJECT_DIR}/models/base/${MODEL_NAME}"
+    RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
 fi
 
 echo "Starting BABILong evaluation of ${MODEL_NAME} at $(date)"
@@ -35,7 +38,6 @@ echo "MODEL_PATH=${MODEL_PATH}"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
-RESULTS_DIR="${PROJECT_DIR}/results/${MODEL_NAME}"
 WANDB_DIR="${PROJECT_DIR}/outputs/babilong/"
 mkdir -p "$RESULTS_DIR"
 mkdir -p "$WANDB_DIR"

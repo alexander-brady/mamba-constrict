@@ -76,7 +76,7 @@ def finetune(cfg: DictConfig):
     model.save_pretrained(
         save_path, 
         is_main_process=(rank == 0),
-        push_to_hub=cfg.push_to_hub,
-        repo_id=cfg.hub_repo_id
+        # push_to_hub=cfg.push_to_hub,
+        # repo_id=cfg.hub_repo_id
     )
     logger.info(f"Model saved to {save_path}")
