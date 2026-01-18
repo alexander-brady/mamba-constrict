@@ -67,6 +67,9 @@ def finetune(cfg: DictConfig):
 
     # Fine-tuning
     trainer.fit(fine_tuner, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    
+    # Restore Norm
+    model.backbone.norm_f = fine_tuner.norm_f
 
     # Build save path: models/<task>/<run_id>
     task = "base" if cfg.data.name == "monology/pile-uncopyrighted" else cfg.data.name
