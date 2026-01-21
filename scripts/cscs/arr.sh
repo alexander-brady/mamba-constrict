@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
-#SBATCH --array=0-5%4 # 4x lambdas + default (no baseline)
+#SBATCH --array=0-5%4 # 5x lambdas + default (no baseline)
 
 set -euo pipefail
 mkdir -p logs
@@ -22,7 +22,7 @@ MODEL_SIZE=2.8b
 BASE_MODEL="state-spaces/mamba-${MODEL_SIZE}-hf"
 STEPS=300
 
-LAMBDAS=(0.0001 0.001 0.01 0.1)
+LAMBDAS=(0.0001 0.001 0.01 0.1 1.0)
 
 # ---- BASELINE: eval only ----
 if [ "${SLURM_ARRAY_TASK_ID}" -eq "${BASELINE_ID}" ]; then

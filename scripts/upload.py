@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 from pathlib import Path
-from transformers import AutoModel
+from transformers import AutoModelForCausalLM
 
 
 def push_model(local_dir: Path, repo_id: str, private: bool):
-    model = AutoModel.from_pretrained(local_dir)
+    model = AutoModelForCausalLM.from_pretrained(local_dir)
 
     commit_msg = f"Add model from {local_dir.name}"
     print(f"Pushing {local_dir} → {repo_id}")
